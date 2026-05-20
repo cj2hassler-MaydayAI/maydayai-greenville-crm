@@ -95,9 +95,10 @@
       <span id="homeBaseLabel" class="home-label">No start location set</span>
       <button class="btn btn-sm btn-outline" onclick="openSetHome()">Set Start</button>
     </div>
-    <div style="flex:1"></div>
-    <button class="btn btn-sm btn-primary" onclick="runRoute()">Optimize</button>
-    <button class="btn btn-sm btn-outline" onclick="closeRoute()">✕</button>
+    <div class="route-header-actions">
+      <button class="btn btn-sm btn-primary" onclick="runRoute()">Optimize Route</button>
+      <button class="btn btn-sm btn-outline" onclick="closeRoute()">✕</button>
+    </div>
   </div>
   <div class="route-instructions" id="routeInstructions">
     Check businesses in the list, then click Optimize. Route starts and ends at your home base.

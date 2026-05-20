@@ -38,7 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initMap() {
-  map = L.map('map').setView([35.6127, -77.3664], 15);
+  const isMobile = window.innerWidth <= 768;
+  map = L.map('map', { zoomControl: !isMobile }).setView([35.6127, -77.3664], 15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19,
@@ -660,17 +661,17 @@ function mobileTab(tab, btn) {
   if (tab === 'map') {
     listPanel.classList.remove('mobile-open');
     routePanel.classList.add('hidden');
-    map && map.invalidateSize();
+    setTimeout(() => map && map.invalidateSize(), 50);
   } else if (tab === 'list') {
     listPanel.classList.add('mobile-open');
     routePanel.classList.add('hidden');
+    renderList(filtered()); // always re-render so list is never stale
   } else if (tab === 'route') {
     listPanel.classList.remove('mobile-open');
     routePanel.classList.remove('hidden');
-    // Pre-populate route instructions
     document.getElementById('routeInstructions').style.display = '';
     document.getElementById('routeSummary').textContent = '';
-    map && map.invalidateSize();
+    setTimeout(() => map && map.invalidateSize(), 50);
   }
 }
 
