@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MaydayAI — Greenville Field CRM</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <div class="navbar-brand">
+    <span class="brand-dot"></span>
+    MaydayAI <span class="brand-sub">Greenville CRM</span>
+  </div>
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-pill" id="stat-total"><span class="pill-num">—</span><span class="pill-label">Total</span></div>
+    <div class="stat-pill green" id="stat-unvisited"><span class="pill-num">—</span><span class="pill-label">Unvisited</span></div>
+    <div class="stat-pill blue" id="stat-visited"><span class="pill-num">—</span><span class="pill-label">Visited</span></div>
+    <div class="stat-pill amber" id="stat-followup"><span class="pill-num">—</span><span class="pill-label">Follow-Up</span></div>
+    <div class="stat-pill purple" id="stat-closed"><span class="pill-num">—</span><span class="pill-label">Closed</span></div>
+    <div class="stat-pill teal" id="stat-rate"><span class="pill-num">—</span><span class="pill-label">Close Rate</span></div>
+  </div>
+  <div class="navbar-actions">
+    <button class="btn btn-outline" onclick="openDiscover()">+ Discover</button>
+    <button class="btn btn-outline" onclick="openAddModal()">+ Add Manual</button>
+    <button class="btn btn-primary" onclick="openRoute()">Optimize Route</button>
+  </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
+
+  <!-- LEFT PANEL -->
+  <aside class="left-panel">
+    <div class="panel-controls">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search businesses..." oninput="filterList()" />
+      <div class="filter-row">
+        <select id="statusFilter" class="filter-select" onchange="filterList()">
+          <option value="">All Status</option>
+          <option value="unvisited">Unvisited</option>
+          <option value="interested">Interested</option>
+          <option value="follow_up">Follow-Up</option>
+          <option value="visited">Visited</option>
+          <option value="not_interested">Not Interested</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select id="sortSelect" class="filter-select" onchange="filterList()">
+          <option value="score">Best Score</option>
+          <option value="name">Name A–Z</option>
+          <option value="recent">Recently Added</option>
+        </select>
+      </div>
+    </div>
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="setTab('list', this)">List</button>
+      <button class="tab-btn" onclick="setTab('suggestions', this)">Today's Picks</button>
+    </div>
+    <div id="businessList" class="business-list"></div>
+    <div id="suggestionList" class="business-list" style="display:none"></div>
+  </aside>
+
+  <!-- MAP -->
+  <main class="map-container">
+    <div id="map"></div>
+    <div class="map-legend">
+      <span class="legend-dot" style="background:#6b7280"></span>Unvisited
+      <span class="legend-dot" style="background:#3b82f6"></span>Visited
+      <span class="legend-dot" style="background:#22c55e"></span>Interested
+      <span class="legend-dot" style="background:#f59e0b"></span>Follow-Up
+      <span class="legend-dot" style="background:#ef4444"></span>Not Interested
+      <span class="legend-dot" style="background:#a855f7"></span>Closed
+    </div>
+  </main>
+</div>
+
+<!-- ROUTE PANEL (slides up) -->
+<div id="routePanel" class="route-panel hidden">
+  <div class="route-header">
+    <strong>Route Optimizer</strong>
+    <div class="home-base-row">
+      <span class="home-icon">🏠</span>
+      <span id="homeBaseLabel" class="home-label">No start location set</span>
+      <button class="btn btn-sm btn-outline" onclick="openSetHome()">Set Start</button>
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn btn-sm btn-primary" onclick="runRoute()">Optimize</button>
+    <button class="btn btn-sm btn-outline" onclick="closeRoute()">✕</button>
+  </div>
+  <div class="route-instructions" id="routeInstructions">
+    Check businesses in the list, then click Optimize. Route starts and ends at your home base.
+    <label class="toggle-label">
+      <span>Honor return times</span>
+      <div class="toggle-wrap">
+        <input type="checkbox" id="honorTimesToggle" />
+        <span class="toggle-slider"></span>
+      </div>
+    </label>
+  </div>
+  <div id="routeSummary" class="route-summary-bar"></div>
+  <ol id="routeList" class="route-list"></ol>
+</div>
+
+<!-- SET HOME BASE MODAL -->
+<div id="homeModal" class="modal-overlay hidden" onclick="closeHomeModal(event)">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Set Starting Location</h2>
+      <button class="modal-close" onclick="closeHomeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#94a3b8;margin-bottom:14px">This is where your route starts and ends every day — your office, home, or wherever you park.</p>
+      <div class="form-group">
+        <label class="form-label">Address</label>
+        <input type="text" id="homeAddress" class="form-input" placeholder="e.g. 100 Airport Rd, Greenville NC" />
+      </div>
+      <p style="font-size:11px;color:#64748b;margin-top:-6px">Or click on the map to pin your location, then come back here and click Save.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeHomeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitHome()">Save Start Location</button>
+    </div>
+  </div>
+</div>
+
+<!-- BUSINESS DETAIL MODAL -->
+<div id="detailModal" class="modal-overlay hidden" onclick="closeDetail(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 id="detailName" class="modal-title"></h2>
+        <span id="detailCategory" class="detail-cat"></span>
+        <span id="detailStatus" class="status-badge"></span>
+      </div>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-section">
+          <div class="detail-row"><span class="detail-icon">📍</span><span id="detailAddress"></span></div>
+          <div class="detail-row"><span class="detail-icon">📞</span><span id="detailPhone"></span></div>
+          <div class="detail-row"><span class="detail-icon">🌐</span><span id="detailWebsite"></span></div>
+          <div class="detail-row"><span class="detail-icon">👤</span><span id="detailOwner"></span></div>
+        </div>
+        <div class="detail-section">
+          <div class="score-card">
+            <div class="score-label">Owner Present Likelihood</div>
+            <div class="score-stars" id="detailStars"></div>
+            <div class="score-window" id="detailWindow"></div>
+            <div class="score-tip" id="detailTip"></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes-section">
+        <label class="notes-label">Notes</label>
+        <div id="detailNotes" class="notes-display"></div>
+      </div>
+      <div id="visitHistory" class="visit-history"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteCurrentBusiness()">Delete</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-outline btn-sm" onclick="closeDetailModal()">Close</button>
+      <button class="btn btn-primary" onclick="openLogVisit()">Log Visit</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG VISIT MODAL -->
+<div id="visitModal" class="modal-overlay hidden" onclick="closeVisit(event)">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Log Visit</h2>
+      <button class="modal-close" onclick="closeVisitModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Outcome</label>
+        <div class="outcome-grid" id="outcomeGrid">
+          <button class="outcome-btn" data-value="interested" onclick="selectOutcome(this)">Interested</button>
+          <button class="outcome-btn" data-value="follow_up" onclick="selectOutcome(this)">Follow-Up</button>
+          <button class="outcome-btn" data-value="not_interested" onclick="selectOutcome(this)">Not Interested</button>
+          <button class="outcome-btn" data-value="no_answer" onclick="selectOutcome(this)">No Answer</button>
+          <button class="outcome-btn" data-value="closed" onclick="selectOutcome(this)">Closed Deal 🎉</button>
+          <button class="outcome-btn" data-value="visited" onclick="selectOutcome(this)">Just Visited</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contact / Owner Name</label>
+        <input type="text" id="visitContact" class="form-input" placeholder="Name you spoke with" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Product Pitched</label>
+        <input type="text" id="visitProduct" class="form-input" value="AI Voice Receptionist" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea id="visitNotes" class="form-input" rows="3" placeholder="Key objections, interest level, next steps..."></textarea>
+      </div>
+      <div id="returnTimeSection" class="return-time-section hidden">
+        <div class="return-time-header">
+          <span>⏰ They asked you to come back at a specific time?</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Return At</label>
+            <input type="time" id="visitReturnAt" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Who to Ask For</label>
+            <input type="text" id="visitReturnNote" class="form-input" placeholder="e.g. Ask for Mike" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeVisitModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitVisit()">Save Visit</button>
+    </div>
+  </div>
+</div>
+
+<!-- DISCOVER MODAL -->
+<div id="discoverModal" class="modal-overlay hidden" onclick="closeDiscover(event)">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Discover Businesses</h2>
+      <button class="modal-close" onclick="closeDiscoverModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="discover-note">Pulls businesses from Google Maps within 2km of downtown Greenville, NC. Chains and non-prospects are filtered automatically.</p>
+      <div class="category-grid">
+        <button class="cat-btn" onclick="runDiscover('restaurant', '')">Restaurants & Bars</button>
+        <button class="cat-btn" onclick="runDiscover('beauty_salon', '')">Salons & Beauty</button>
+        <button class="cat-btn" onclick="runDiscover('hair_care', '')">Hair Care</button>
+        <button class="cat-btn" onclick="runDiscover('spa', '')">Spas & Wellness</button>
+        <button class="cat-btn" onclick="runDiscover('gym', '')">Gyms & Fitness</button>
+        <button class="cat-btn" onclick="runDiscover('dentist', '')">Dental Offices</button>
+        <button class="cat-btn" onclick="runDiscover('doctor', '')">Medical Offices</button>
+        <button class="cat-btn" onclick="runDiscover('lawyer', '')">Law Offices</button>
+        <button class="cat-btn" onclick="runDiscover('accounting', '')">Accounting/Finance</button>
+        <button class="cat-btn" onclick="runDiscover('real_estate_agency', '')">Real Estate</button>
+        <button class="cat-btn" onclick="runDiscover('florist', '')">Florists</button>
+        <button class="cat-btn" onclick="runDiscover('jewelry_store', '')">Jewelry Stores</button>
+        <button class="cat-btn" onclick="runDiscover('clothing_store', '')">Clothing & Boutiques</button>
+        <button class="cat-btn" onclick="runDiscover('car_repair', '')">Auto Services</button>
+        <button class="cat-btn" onclick="runDiscover('pet_store', '')">Pet Shops</button>
+        <button class="cat-btn" onclick="runDiscover('', 'small business downtown')">All Local Businesses</button>
+      </div>
+      <div id="discoverResult" class="discover-result"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD BUSINESS MODAL -->
+<div id="addModal" class="modal-overlay hidden" onclick="closeAdd(event)">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Add Business</h2>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+
+    <!-- Step 1: Name search -->
+    <div id="addStep1" class="modal-body">
+      <p style="font-size:13px;color:#94a3b8;margin-bottom:14px">Just type the business name — we'll pull the rest from Google.</p>
+      <div class="form-group" style="display:flex;gap:8px;margin-bottom:0">
+        <input type="text" id="addName" class="form-input" placeholder="e.g. Smith's Barbershop" onkeydown="if(event.key==='Enter')lookupBusiness()" style="flex:1" />
+        <button class="btn btn-primary" onclick="lookupBusiness()">Look Up</button>
+      </div>
+      <div id="addLookupMsg" style="margin-top:10px;font-size:13px;color:#94a3b8;min-height:18px"></div>
+    </div>
+
+    <!-- Step 2: Preview & confirm -->
+    <div id="addStep2" class="modal-body hidden">
+      <div id="lookupPreview" class="lookup-preview"></div>
+    </div>
+
+    <div class="modal-footer" id="addFooter1">
+      <button class="btn btn-outline" onclick="closeAddModal()">Cancel</button>
+    </div>
+    <div class="modal-footer hidden" id="addFooter2">
+      <button class="btn btn-outline" onclick="resetAddModal()">Search Again</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-outline" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAdd()">Add Business</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
