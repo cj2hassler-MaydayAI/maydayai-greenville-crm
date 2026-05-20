@@ -246,11 +246,20 @@ function cardHTML(b) {
 // ── MAP ───────────────────────────────────────────────────────────────────────
 
 function updateMapMarkers() {
+  // Remove markers that are no longer in the current rep's business list
+  const activeIds = new Set(allBusinesses.map(b => b.id));
+  Object.keys(markers).forEach(id => {
+    if (!activeIds.has(parseInt(id))) {
+      map.removeLayer(markers[id]);
+      delete markers[id];
+    }
+  });
+
+  // Add or update remaining markers
   allBusinesses.forEach(b => {
     if (!b.lat || !b.lng) return;
     const color = STATUS_COLORS[b.status] || '#6b7280';
     const icon = makeIcon(color);
-
     if (markers[b.id]) {
       markers[b.id].setIcon(icon);
     } else {
@@ -595,7 +604,7 @@ async function runDiscover(type, keyword) {
   }
 
   resultEl.textContent = 'Searching...';
-  const body = { type, keyword, rep: currentRep !== 'mayday' ? currentRep : null };
+  const body = { type, keyword };
   if (lat !== null) { body.lat = lat; body.lng = lng; }
 
   const res = await fetch('/api/discover', {

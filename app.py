@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import or_
 from datetime import datetime
 import os
 import requests
@@ -255,7 +256,8 @@ def get_businesses():
     rep = request.args.get('rep', '')
     q = Business.query
     if rep and rep != 'mayday':
-        q = q.filter(Business.rep == rep)
+        # Show this rep's personal businesses + shared discovered businesses (rep=null)
+        q = q.filter(or_(Business.rep == rep, Business.rep == None))
     businesses = q.order_by(Business.owner_score.desc()).all()
     return jsonify([b.to_dict() for b in businesses])
 
@@ -399,7 +401,8 @@ def discover():
     keyword = data.get('keyword', 'small business')
     lat = data.get('lat', CENTER['lat'])
     lng = data.get('lng', CENTER['lng'])
-    rep = data.get('rep') or None
+    # Discovered businesses are always shared (rep=null) so both reps see them
+    # and discovering the same category twice never creates duplicates
 
     THIRTY_MILES_M = 48280
 
@@ -442,7 +445,7 @@ def discover():
             owner_score=profile['score'],
             best_window=profile['window'],
             visit_tip=profile['tip'],
-            rep=rep,
+            rep=None,
         )
         db.session.add(b)
         added.append(place['name'])
@@ -553,7 +556,7 @@ def stats():
     rep = request.args.get('rep', '')
     q = Business.query
     if rep and rep != 'mayday':
-        q = q.filter(Business.rep == rep)
+        q = q.filter(or_(Business.rep == rep, Business.rep == None))
     total = q.count()
     visited = q.filter(Business.status != 'unvisited').count()
     interested = q.filter_by(status='interested').count()
@@ -578,7 +581,7 @@ def suggestions():
     rep = request.args.get('rep', '')
     q = Business.query.filter_by(status='unvisited')
     if rep and rep != 'mayday':
-        q = q.filter(Business.rep == rep)
+        q = q.filter(or_(Business.rep == rep, Business.rep == None))
     businesses = q.order_by(Business.owner_score.desc()).limit(10).all()
     return jsonify([b.to_dict() for b in businesses])
 
