@@ -186,76 +186,101 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .mobile-stats { display: none; }
 .mobile-nav   { display: none; }
 
+/* Stats row styles (used on mobile) */
+.mobile-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  border-right: 1px solid var(--border);
+}
+.mobile-stat:last-child { border-right: none; }
+.mobile-stat span:first-child { font-size: 17px; font-weight: 700; }
+.mobile-stat span:last-child  { font-size: 9px; text-transform: uppercase; color: var(--text2); letter-spacing: 0.04em; }
+.mobile-stat.green span:first-child  { color: var(--green); }
+.mobile-stat.amber span:first-child  { color: var(--amber); }
+.mobile-stat.purple span:first-child { color: var(--purple); }
+
 @media (max-width: 768px) {
 
-  /* Kill desktop overflow lock so mobile scrolls */
-  body { overflow: auto; height: auto; }
+  /* ── App shell: fixed full-height column ── */
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+  }
 
-  /* NAVBAR — logo only */
-  .navbar { padding: 0 14px; height: 50px; }
+  /* NAVBAR — logo only, no overflow */
+  .navbar { flex-shrink: 0; height: 48px; padding: 0 14px; }
   .stats-bar { display: none; }
   .navbar-actions { display: none; }
   .brand-sub { display: none; }
 
-  /* MOBILE STATS ROW */
+  /* MOBILE STATS ROW — sits below navbar */
   .mobile-stats {
     display: flex;
+    flex-shrink: 0;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 6px 0;
-    flex-shrink: 0;
+    padding: 5px 0;
   }
-  .mobile-stat {
+
+  /* MAIN AREA — fills all space between stats and bottom nav */
+  .main-layout {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    border-right: 1px solid var(--border);
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
   }
-  .mobile-stat:last-child { border-right: none; }
-  .mobile-stat span:first-child { font-size: 16px; font-weight: 700; }
-  .mobile-stat span:last-child  { font-size: 9px; text-transform: uppercase; color: var(--text2); letter-spacing: 0.04em; }
-  .mobile-stat.green span:first-child { color: var(--green); }
-  .mobile-stat.amber span:first-child { color: var(--amber); }
-  .mobile-stat.purple span:first-child { color: var(--purple); }
 
-  /* LAYOUT — stack map full screen */
-  .main-layout { flex-direction: column; flex: none; height: calc(100dvh - 50px - 32px - 58px); }
-
-  /* MAP — full width */
-  .map-container { flex: 1; min-height: 0; }
+  /* MAP — fills entire main area */
+  .map-container {
+    position: absolute;
+    inset: 0;
+  }
   #map { width: 100%; height: 100%; }
   .map-legend { display: none; }
 
-  /* LEFT PANEL — slides up as full-screen overlay */
+  /* LEFT PANEL — replaces map entirely when active, hidden otherwise */
   .left-panel {
-    position: fixed;
+    position: absolute;
     inset: 0;
     width: 100%;
-    height: 100%;
-    z-index: 450;
-    transform: translateY(100%);
-    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    z-index: 10;
     border-right: none;
-    padding-bottom: 58px; /* above bottom nav */
+    display: none;
+    flex-direction: column;
   }
-  .left-panel.mobile-open { transform: translateY(0); }
+  .left-panel.mobile-open {
+    display: flex;
+  }
 
-  /* ROUTE PANEL — sits above bottom nav */
-  .route-panel { left: 0; bottom: 58px; max-height: 60vh; }
+  /* ROUTE PANEL — sticks to bottom of main area */
+  .route-panel {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    z-index: 20;
+    max-height: 65%;
+    border-radius: 16px 16px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .route-panel.hidden { display: none; }
   .route-header { flex-wrap: wrap; gap: 8px; }
   .home-base-row { max-width: 100%; }
 
-  /* MOBILE BOTTOM NAV */
+  /* BOTTOM NAV — part of normal flow, always at bottom */
   .mobile-nav {
     display: flex;
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
+    flex-shrink: 0;
     height: 58px;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    z-index: 500;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .mobile-nav-btn {
     flex: 1;
@@ -268,51 +293,49 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     border: none;
     color: var(--text2);
     cursor: pointer;
-    padding: 6px 2px;
+    padding: 4px 2px;
     transition: color 0.15s;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .mobile-nav-btn.active { color: var(--primary); }
-  .mnav-icon { font-size: 20px; line-height: 1; }
+  .mnav-icon  { font-size: 20px; line-height: 1; }
   .mnav-label { font-size: 10px; font-weight: 500; }
   .mnav-plus {
-    width: 32px; height: 32px;
+    width: 30px; height: 30px;
     background: var(--primary);
     color: #fff;
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; font-weight: 300;
     line-height: 1;
-    margin-bottom: 1px;
   }
 
-  /* MODALS — slide up from bottom */
+  /* MODALS — full-width sheet from bottom */
   .modal-overlay { padding: 0; align-items: flex-end; }
   .modal-box {
     max-width: 100%;
     width: 100%;
-    border-radius: 20px 20px 0 0;
     max-height: 92dvh;
-    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: 20px 20px 0 0;
   }
 
   /* TOUCH-FRIENDLY SIZING */
-  .btn { padding: 10px 16px; font-size: 14px; }
-  .biz-card { padding: 12px 14px; }
-  .biz-name { font-size: 14px; }
-  .outcome-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .outcome-btn { padding: 12px 8px; font-size: 13px; }
+  .btn          { padding: 10px 16px; font-size: 14px; }
+  .biz-card     { padding: 12px 14px; }
+  .biz-name     { font-size: 14px; }
+  .outcome-btn  { padding: 12px 8px; font-size: 13px; }
   .filter-select { font-size: 13px; padding: 7px 8px; }
-  .search-input { font-size: 14px; padding: 9px 12px; }
-  .tab-btn { padding: 10px; font-size: 13px; }
+  .search-input  { font-size: 16px; padding: 9px 12px; } /* 16px prevents iOS zoom */
+  .tab-btn       { padding: 10px; font-size: 13px; }
+  .cat-btn       { padding: 12px 10px; font-size: 13px; }
+  .detail-grid   { grid-template-columns: 1fr; }
+  .form-row      { grid-template-columns: 1fr; }
+  .lookup-grid   { grid-template-columns: 1fr; }
   .category-grid { grid-template-columns: 1fr 1fr; }
-  .cat-btn { padding: 12px 10px; font-size: 13px; }
-  .detail-grid { grid-template-columns: 1fr; }
-  .form-row { grid-template-columns: 1fr; }
-  .lookup-grid { grid-template-columns: 1fr; }
 
-  /* TOAST — above bottom nav */
-  .toast { bottom: 70px; left: 12px; right: 12px; text-align: center; }
+  /* TOAST — floats above bottom nav */
+  .toast { bottom: 68px; left: 12px; right: 12px; text-align: center; }
 }
 
 /* TOGGLE */

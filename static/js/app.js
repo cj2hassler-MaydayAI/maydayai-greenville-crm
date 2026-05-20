@@ -292,9 +292,8 @@ async function openDetail(id) {
 
   show('detailModal');
   if (b.lat && b.lng) {
-    // On mobile, close the list panel so map is visible behind modal
     document.querySelector('.left-panel').classList.remove('mobile-open');
-    map.setView([b.lat, b.lng], 17);
+    setTimeout(() => { map && map.invalidateSize(); map.setView([b.lat, b.lng], 17); }, 50);
   }
 }
 
@@ -652,25 +651,27 @@ function setTab(tab, btn) {
 // ── MOBILE NAV ────────────────────────────────────────────────────────────────
 
 function mobileTab(tab, btn) {
-  // Update active state on bottom nav buttons (skip the Add button)
   document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
-  const panel = document.querySelector('.left-panel');
+  const listPanel  = document.querySelector('.left-panel');
+  const routePanel = document.getElementById('routePanel');
 
   if (tab === 'map') {
-    panel.classList.remove('mobile-open');
-    document.getElementById('routePanel').classList.add('hidden');
+    listPanel.classList.remove('mobile-open');
+    routePanel.classList.add('hidden');
+    map && map.invalidateSize();
   } else if (tab === 'list') {
-    panel.classList.add('mobile-open');
-    document.getElementById('routePanel').classList.add('hidden');
+    listPanel.classList.add('mobile-open');
+    routePanel.classList.add('hidden');
   } else if (tab === 'route') {
-    panel.classList.remove('mobile-open');
-    openRoute();
+    listPanel.classList.remove('mobile-open');
+    routePanel.classList.remove('hidden');
+    // Pre-populate route instructions
+    document.getElementById('routeInstructions').style.display = '';
+    document.getElementById('routeSummary').textContent = '';
+    map && map.invalidateSize();
   }
-
-  // Resize map after panel animates
-  setTimeout(() => map && map.invalidateSize(), 300);
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
