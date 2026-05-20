@@ -190,6 +190,7 @@ class Business(db.Model):
     visit_tip = db.Column(db.String(255))
     return_at = db.Column(db.String(10))   # HH:MM 24h, e.g. "14:00"
     return_note = db.Column(db.String(255)) # e.g. "ask for Mike"
+    rep = db.Column(db.String(20))          # 'cj', 'mason', or null (shared/legacy)
     last_visited = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -213,6 +214,7 @@ class Business(db.Model):
             'visit_tip': self.visit_tip,
             'return_at': self.return_at,
             'return_note': self.return_note,
+            'rep': self.rep,
             'last_visited': self.last_visited.isoformat() if self.last_visited else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
@@ -250,7 +252,11 @@ def index():
 
 @app.route('/api/businesses', methods=['GET'])
 def get_businesses():
-    businesses = Business.query.order_by(Business.owner_score.desc()).all()
+    rep = request.args.get('rep', '')
+    q = Business.query
+    if rep and rep != 'mayday':
+        q = q.filter(Business.rep == rep)
+    businesses = q.order_by(Business.owner_score.desc()).all()
     return jsonify([b.to_dict() for b in businesses])
 
 @app.route('/api/businesses', methods=['POST'])
@@ -269,6 +275,7 @@ def add_business():
         owner_score=profile['score'],
         best_window=profile['window'],
         visit_tip=profile['tip'],
+        rep=data.get('rep') or None,
     )
     db.session.add(b)
     db.session.commit()
@@ -392,6 +399,7 @@ def discover():
     keyword = data.get('keyword', 'small business')
     lat = data.get('lat', CENTER['lat'])
     lng = data.get('lng', CENTER['lng'])
+    rep = data.get('rep') or None
 
     THIRTY_MILES_M = 48280
 
@@ -434,6 +442,7 @@ def discover():
             owner_score=profile['score'],
             best_window=profile['window'],
             visit_tip=profile['tip'],
+            rep=rep,
         )
         db.session.add(b)
         added.append(place['name'])
@@ -541,12 +550,16 @@ def optimize_route():
 
 @app.route('/api/stats', methods=['GET'])
 def stats():
-    total = Business.query.count()
-    visited = Business.query.filter(Business.status != 'unvisited').count()
-    interested = Business.query.filter_by(status='interested').count()
-    follow_up = Business.query.filter_by(status='follow_up').count()
-    closed = Business.query.filter_by(status='closed').count()
-    not_interested = Business.query.filter_by(status='not_interested').count()
+    rep = request.args.get('rep', '')
+    q = Business.query
+    if rep and rep != 'mayday':
+        q = q.filter(Business.rep == rep)
+    total = q.count()
+    visited = q.filter(Business.status != 'unvisited').count()
+    interested = q.filter_by(status='interested').count()
+    follow_up = q.filter_by(status='follow_up').count()
+    closed = q.filter_by(status='closed').count()
+    not_interested = q.filter_by(status='not_interested').count()
 
     return jsonify({
         'total': total,
@@ -562,18 +575,22 @@ def stats():
 
 @app.route('/api/suggestions', methods=['GET'])
 def suggestions():
-    businesses = (
-        Business.query
-        .filter_by(status='unvisited')
-        .order_by(Business.owner_score.desc())
-        .limit(10)
-        .all()
-    )
+    rep = request.args.get('rep', '')
+    q = Business.query.filter_by(status='unvisited')
+    if rep and rep != 'mayday':
+        q = q.filter(Business.rep == rep)
+    businesses = q.order_by(Business.owner_score.desc()).limit(10).all()
     return jsonify([b.to_dict() for b in businesses])
 
 
 with app.app_context():
     db.create_all()
+    # Migration: add rep column to existing databases
+    try:
+        db.session.execute(db.text('ALTER TABLE business ADD COLUMN rep VARCHAR(20)'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()  # Column already exists — that's fine
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5001))

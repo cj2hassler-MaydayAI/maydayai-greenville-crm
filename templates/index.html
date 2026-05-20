@@ -11,12 +11,48 @@
 </head>
 <body>
 
+<!-- REP PICKER -->
+<div id="repPicker" class="rep-picker-overlay">
+  <div class="rep-picker-box">
+    <div class="rep-picker-logo"><span class="brand-dot"></span> MaydayAI CRM</div>
+    <h2 class="rep-picker-title">Who's using the app?</h2>
+    <div class="rep-picker-cards">
+      <button class="rep-card rep-card-cj" onclick="setRep('cj')">
+        <span class="rep-avatar rep-avatar-cj">CJ</span>
+        <span class="rep-card-text">
+          <span class="rep-card-name">CJ</span>
+          <span class="rep-card-sub">My businesses only</span>
+        </span>
+      </button>
+      <button class="rep-card rep-card-mason" onclick="setRep('mason')">
+        <span class="rep-avatar rep-avatar-mason">M</span>
+        <span class="rep-card-text">
+          <span class="rep-card-name">Mason</span>
+          <span class="rep-card-sub">My businesses only</span>
+        </span>
+      </button>
+      <button class="rep-card rep-card-mayday" onclick="setRep('mayday')">
+        <span class="rep-avatar rep-avatar-mayday">MA</span>
+        <span class="rep-card-text">
+          <span class="rep-card-name">MaydayAI</span>
+          <span class="rep-card-sub">All businesses combined</span>
+        </span>
+      </button>
+    </div>
+    <p class="rep-picker-note">Saved to this device — tap your name in the top bar to switch.</p>
+  </div>
+</div>
+
 <!-- NAVBAR -->
 <header class="navbar">
   <div class="navbar-brand">
     <span class="brand-dot"></span>
     MaydayAI <span class="brand-sub">Greenville CRM</span>
   </div>
+  <button class="rep-badge" id="repBadge" onclick="showRepPicker()" title="Switch user">
+    <span id="repBadgeText">—</span>
+    <span class="rep-badge-switch">⇄</span>
+  </button>
   <div class="stats-bar" id="statsBar">
     <div class="stat-pill" id="stat-total"><span class="pill-num">—</span><span class="pill-label">Total</span></div>
     <div class="stat-pill green" id="stat-unvisited"><span class="pill-num">—</span><span class="pill-label">Unvisited</span></div>

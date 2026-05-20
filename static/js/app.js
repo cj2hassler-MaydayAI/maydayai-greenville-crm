@@ -9,6 +9,7 @@ let selectedOutcome = null;
 let routeVisible = false;
 let routeLayer = null;
 let currentTab = 'list';
+let currentRep = localStorage.getItem('maydaycrm_rep') || null;
 
 const STATUS_COLORS = {
   unvisited: '#6b7280',
@@ -34,8 +35,36 @@ const STATUS_LABELS = {
 
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
-  loadAll();
+  if (!currentRep) {
+    showRepPicker();
+  } else {
+    applyRep(currentRep);
+    loadAll();
+  }
 });
+
+// ── REP / USER PICKER ─────────────────────────────────────────────────────────
+
+function showRepPicker() {
+  document.getElementById('repPicker').classList.remove('hidden');
+}
+
+function setRep(rep) {
+  currentRep = rep;
+  localStorage.setItem('maydaycrm_rep', rep);
+  document.getElementById('repPicker').classList.add('hidden');
+  applyRep(rep);
+  loadAll();
+}
+
+function applyRep(rep) {
+  const labels = { cj: 'CJ', mason: 'Mason', mayday: 'MaydayAI' };
+  const colors = { cj: '#3b82f6', mason: '#22c55e', mayday: '#a855f7' };
+  const badgeText = document.getElementById('repBadgeText');
+  const badge = document.getElementById('repBadge');
+  if (badgeText) badgeText.textContent = labels[rep] || rep;
+  if (badge) badge.style.borderColor = colors[rep] || '';
+}
 
 function initMap() {
   const isMobile = window.innerWidth <= 768;
@@ -97,14 +126,14 @@ function placeHomeMarker(lat, lng, address) {
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
 async function loadBusinesses() {
-  const res = await fetch('/api/businesses');
+  const res = await fetch(`/api/businesses?rep=${currentRep || 'mayday'}`);
   allBusinesses = await res.json();
   renderList(filtered());
   updateMapMarkers();
 }
 
 async function loadStats() {
-  const res = await fetch('/api/stats');
+  const res = await fetch(`/api/stats?rep=${currentRep || 'mayday'}`);
   const s = await res.json();
   setText('stat-total', s.total, 'Total');
   setText('stat-unvisited', s.unvisited, 'Unvisited');
@@ -121,7 +150,7 @@ async function loadStats() {
 }
 
 async function loadSuggestions() {
-  const res = await fetch('/api/suggestions');
+  const res = await fetch(`/api/suggestions?rep=${currentRep || 'mayday'}`);
   const list = await res.json();
   renderSuggestions(list);
 }
@@ -566,7 +595,7 @@ async function runDiscover(type, keyword) {
   }
 
   resultEl.textContent = 'Searching...';
-  const body = { type, keyword };
+  const body = { type, keyword, rep: currentRep !== 'mayday' ? currentRep : null };
   if (lat !== null) { body.lat = lat; body.lng = lng; }
 
   const res = await fetch('/api/discover', {
@@ -693,10 +722,11 @@ async function confirmAdd() {
   if (nameEl) pendingAddData.name = nameEl.value.trim();
   if (!pendingAddData.name) { toast('Business name is required', 'error'); return; }
 
+  const payload = { ...pendingAddData, rep: currentRep !== 'mayday' ? currentRep : null };
   const res = await fetch('/api/businesses', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(pendingAddData),
+    body: JSON.stringify(payload),
   });
   if (res.ok) {
     closeAddModal();
