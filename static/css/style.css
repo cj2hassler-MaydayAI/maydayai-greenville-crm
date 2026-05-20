@@ -205,25 +205,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 @media (max-width: 768px) {
 
   /* ── App shell: fixed full-height column ── */
-  html, body {
+  html {
     height: 100%;
+    height: -webkit-fill-available;
+    height: 100dvh;
+  }
+  body {
+    height: 100%;
+    height: -webkit-fill-available;
     height: 100dvh;
     overflow: hidden;
     max-width: 100vw;
-  }
-  body {
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Prevent any child from blowing out the width */
   * { max-width: 100%; box-sizing: border-box; }
 
-  /* iOS smooth scrolling on lists */
+  /* iOS smooth scrolling on lists — min-height:0 is required for flex overflow */
   .business-list {
-    -webkit-overflow-scrolling: touch;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* NAVBAR — logo only, no overflow */
