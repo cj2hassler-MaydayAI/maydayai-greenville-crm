@@ -94,6 +94,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .route-panel.hidden { transform: translateY(100%); }
 .route-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .home-base-row { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 10px; }
+.home-location-btns { display: flex; gap: 6px; }
 .home-icon { font-size: 14px; }
 .home-label { font-size: 12px; color: var(--text2); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .home-label.set { color: var(--green); }
@@ -308,6 +309,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   .route-header > strong { font-size: 17px; }
   .home-base-row { width: 100%; }
   .home-label { max-width: none; flex: 1; white-space: normal; font-size: 12px; }
+  /* Location buttons: Use My Location takes full width, Type Address is secondary */
+  .home-location-btns { display: flex; gap: 8px; width: 100%; }
+  .home-location-btns .btn-primary { flex: 2; font-size: 14px; padding: 11px; }
+  .home-location-btns .btn-outline { flex: 1; font-size: 13px; }
   .route-header-actions { display: flex; gap: 8px; }
   .route-header-actions .btn-primary { flex: 1; text-align: center; font-size: 15px; padding: 12px; }
   .route-instructions { font-size: 13px; margin-bottom: 12px; }

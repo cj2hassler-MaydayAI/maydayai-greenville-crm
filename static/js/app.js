@@ -392,6 +392,50 @@ function closeRoute() {
 
 // ── HOME BASE ─────────────────────────────────────────────────────────────────
 
+function useCurrentLocation() {
+  if (!navigator.geolocation) {
+    toast('Geolocation not supported by your browser', 'error');
+    return;
+  }
+  const btn = event && event.currentTarget;
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Getting location...'; btn.disabled = true; }
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+        { headers: { 'Accept-Language': 'en-US,en' } }
+      );
+      const geo = await r.json();
+      if (geo.display_name) {
+        const parts = geo.display_name.split(', ');
+        address = parts.slice(0, 4).join(', ');
+      }
+    } catch (_) { /* keep coordinate fallback */ }
+
+    const res = await fetch('/api/home_base', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat, lng, address }),
+    });
+    const data = await res.json();
+    if (btn) { btn.textContent = orig; btn.disabled = false; }
+    if (data.error) { toast(data.error, 'error'); return; }
+    homeBase = data;
+    updateHomeUI();
+    placeHomeMarker(data.lat, data.lng, data.address);
+    hide('homeModal');
+    toast('Location set!', 'success');
+  }, () => {
+    if (btn) { btn.textContent = orig; btn.disabled = false; }
+    toast('Could not get your location — check browser permissions', 'error');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
 function openSetHome() {
   pendingHomeLatLng = null;
   document.getElementById('homeAddress').value = homeBase?.address || '';

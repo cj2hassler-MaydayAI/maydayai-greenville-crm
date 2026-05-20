@@ -93,7 +93,10 @@
     <div class="home-base-row">
       <span class="home-icon">🏠</span>
       <span id="homeBaseLabel" class="home-label">No start location set</span>
-      <button class="btn btn-sm btn-outline" onclick="openSetHome()">Set Start</button>
+    </div>
+    <div class="home-location-btns">
+      <button class="btn btn-sm btn-primary" onclick="useCurrentLocation()">📍 Use My Location</button>
+      <button class="btn btn-sm btn-outline" onclick="openSetHome()">Type Address</button>
     </div>
     <div class="route-header-actions">
       <button class="btn btn-sm btn-primary" onclick="runRoute()">Optimize Route</button>
@@ -122,7 +125,8 @@
       <button class="modal-close" onclick="closeHomeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p style="font-size:13px;color:#94a3b8;margin-bottom:14px">This is where your route starts and ends every day — your office, home, or wherever you park.</p>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:14px;font-size:14px" onclick="useCurrentLocation()">📍 Use My Current Location</button>
+      <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:14px">— or type an address below —</p>
       <div class="form-group">
         <label class="form-label">Address</label>
         <input type="text" id="homeAddress" class="form-input" placeholder="e.g. 100 Airport Rd, Greenville NC" />
@@ -131,7 +135,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeHomeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="submitHome()">Save Start Location</button>
+      <button class="btn btn-primary" onclick="submitHome()">Save Address</button>
     </div>
   </div>
 </div>
