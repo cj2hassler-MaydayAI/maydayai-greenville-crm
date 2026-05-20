@@ -111,6 +111,12 @@ async function loadStats() {
   setText('stat-followup', s.follow_up, 'Follow-Up');
   setText('stat-closed', s.closed, 'Closed');
   setText('stat-rate', s.close_rate + '%', 'Close Rate');
+  // Mobile stats bar
+  const ms = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  ms('m-total', s.total);
+  ms('m-unvisited', s.unvisited);
+  ms('m-followup', s.follow_up);
+  ms('m-closed', s.closed);
 }
 
 async function loadSuggestions() {
@@ -285,7 +291,11 @@ async function openDetail(id) {
   }
 
   show('detailModal');
-  if (b.lat && b.lng) map.setView([b.lat, b.lng], 17);
+  if (b.lat && b.lng) {
+    // On mobile, close the list panel so map is visible behind modal
+    document.querySelector('.left-panel').classList.remove('mobile-open');
+    map.setView([b.lat, b.lng], 17);
+  }
 }
 
 function setStatusBadge(elId, status) {
@@ -637,6 +647,30 @@ function setTab(tab, btn) {
   document.getElementById('businessList').style.display = tab === 'list' ? 'flex' : 'none';
   document.getElementById('suggestionList').style.display = tab === 'suggestions' ? 'flex' : 'none';
   if (tab === 'suggestions') loadSuggestions();
+}
+
+// ── MOBILE NAV ────────────────────────────────────────────────────────────────
+
+function mobileTab(tab, btn) {
+  // Update active state on bottom nav buttons (skip the Add button)
+  document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const panel = document.querySelector('.left-panel');
+
+  if (tab === 'map') {
+    panel.classList.remove('mobile-open');
+    document.getElementById('routePanel').classList.add('hidden');
+  } else if (tab === 'list') {
+    panel.classList.add('mobile-open');
+    document.getElementById('routePanel').classList.add('hidden');
+  } else if (tab === 'route') {
+    panel.classList.remove('mobile-open');
+    openRoute();
+  }
+
+  // Resize map after panel animates
+  setTimeout(() => map && map.invalidateSize(), 300);
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────

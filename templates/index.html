@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>MaydayAI — Greenville Field CRM</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
@@ -29,6 +31,14 @@
     <button class="btn btn-primary" onclick="openRoute()">Optimize Route</button>
   </div>
 </header>
+
+<!-- MOBILE STATS BAR -->
+<div class="mobile-stats">
+  <div class="mobile-stat"><span id="m-total">—</span><span>Total</span></div>
+  <div class="mobile-stat green"><span id="m-unvisited">—</span><span>Unvisited</span></div>
+  <div class="mobile-stat amber"><span id="m-followup">—</span><span>Follow-Up</span></div>
+  <div class="mobile-stat purple"><span id="m-closed">—</span><span>Closed</span></div>
+</div>
 
 <!-- MAIN LAYOUT -->
 <div class="main-layout">
@@ -288,6 +298,25 @@
     </div>
   </div>
 </div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav">
+  <button class="mobile-nav-btn active" id="mnav-map" onclick="mobileTab('map', this)">
+    <span class="mnav-icon">🗺️</span><span class="mnav-label">Map</span>
+  </button>
+  <button class="mobile-nav-btn" id="mnav-list" onclick="mobileTab('list', this)">
+    <span class="mnav-icon">📋</span><span class="mnav-label">Businesses</span>
+  </button>
+  <button class="mobile-nav-btn mnav-add" onclick="openAddModal()">
+    <span class="mnav-icon mnav-plus">+</span><span class="mnav-label">Add</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="openDiscover()">
+    <span class="mnav-icon">🔍</span><span class="mnav-label">Discover</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="mobileTab('route', this)">
+    <span class="mnav-icon">📍</span><span class="mnav-label">Route</span>
+  </button>
+</nav>
 
 <!-- TOAST -->
 <div id="toast" class="toast hidden"></div>
