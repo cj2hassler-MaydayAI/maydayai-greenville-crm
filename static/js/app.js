@@ -385,6 +385,9 @@ function closeRoute() {
   routeVisible = false;
   document.getElementById('routePanel').classList.add('hidden');
   if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  if (window.innerWidth <= 768) {
+    mobileTab('map', document.getElementById('mnav-map'));
+  }
 }
 
 // ── HOME BASE ─────────────────────────────────────────────────────────────────
