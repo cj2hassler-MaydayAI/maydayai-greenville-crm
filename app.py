@@ -390,11 +390,15 @@ def discover():
     data = request.json
     place_type = data.get('type', '')
     keyword = data.get('keyword', 'small business')
+    lat = data.get('lat', CENTER['lat'])
+    lng = data.get('lng', CENTER['lng'])
+
+    THIRTY_MILES_M = 48280
 
     url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
     params = {
-        'location': f"{CENTER['lat']},{CENTER['lng']}",
-        'radius': 2000,
+        'location': f"{lat},{lng}",
+        'radius': THIRTY_MILES_M,
         'key': GOOGLE_API_KEY,
     }
     if place_type:

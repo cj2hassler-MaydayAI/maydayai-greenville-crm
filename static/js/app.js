@@ -544,25 +544,47 @@ function closeDiscoverModal() { hide('discoverModal'); }
 
 async function runDiscover(type, keyword) {
   const btns = document.querySelectorAll('.cat-btn');
+  const resultEl = document.getElementById('discoverResult');
   btns.forEach(b => b.disabled = true);
-  document.getElementById('discoverResult').textContent = 'Searching...';
+
+  // 1. Try GPS; 2. Fall back to saved home base; 3. Fall back to Greenville
+  let lat = null, lng = null, locationLabel = 'your area';
+  resultEl.textContent = 'Getting your location...';
+  try {
+    const pos = await new Promise((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, maximumAge: 60000 })
+    );
+    lat = pos.coords.latitude;
+    lng = pos.coords.longitude;
+    locationLabel = 'your current location';
+  } catch (_) {
+    if (homeBase && homeBase.lat) {
+      lat = homeBase.lat;
+      lng = homeBase.lng;
+      locationLabel = homeBase.address || 'your start location';
+    }
+  }
+
+  resultEl.textContent = 'Searching...';
+  const body = { type, keyword };
+  if (lat !== null) { body.lat = lat; body.lng = lng; }
 
   const res = await fetch('/api/discover', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, keyword }),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
 
   btns.forEach(b => b.disabled = false);
 
   if (data.error) {
-    document.getElementById('discoverResult').textContent = '⚠ ' + data.error;
+    resultEl.textContent = '⚠ ' + data.error;
     return;
   }
 
-  document.getElementById('discoverResult').textContent =
-    `✓ Added ${data.added} businesses. Skipped ${data.skipped} (already in DB or filtered out).`;
+  resultEl.textContent =
+    `✓ Added ${data.added} businesses within 30 miles of ${locationLabel}. Skipped ${data.skipped} (already in DB or filtered out).`;
 
   if (data.added > 0) loadAll();
 }
