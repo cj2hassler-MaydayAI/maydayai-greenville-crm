@@ -578,7 +578,7 @@ async function deleteSelected() {
   const res = await fetch('/api/businesses/bulk_delete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ids }),
+    body: JSON.stringify({ ids, rep: currentRep }),
   });
   const data = await res.json();
   if (data.deleted !== undefined) {

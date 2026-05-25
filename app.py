@@ -1,6 +1,5 @@
 from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_
 from datetime import datetime
 import os
 import requests
@@ -257,8 +256,7 @@ def get_businesses():
     rep = request.args.get('rep', '')
     q = Business.query
     if rep and rep != 'mayday':
-        # Show this rep's personal businesses + shared discovered businesses (rep=null)
-        q = q.filter(or_(Business.rep == rep, Business.rep == None))
+        q = q.filter(Business.rep == rep)
     businesses = q.order_by(Business.owner_score.desc()).all()
     return jsonify([b.to_dict() for b in businesses])
 
@@ -557,7 +555,7 @@ def stats():
     rep = request.args.get('rep', '')
     q = Business.query
     if rep and rep != 'mayday':
-        q = q.filter(or_(Business.rep == rep, Business.rep == None))
+        q = q.filter(Business.rep == rep)
     total = q.count()
     visited = q.filter(Business.status != 'unvisited').count()
     interested = q.filter_by(status='interested').count()
@@ -582,7 +580,7 @@ def suggestions():
     rep = request.args.get('rep', '')
     q = Business.query.filter_by(status='unvisited')
     if rep and rep != 'mayday':
-        q = q.filter(or_(Business.rep == rep, Business.rep == None))
+        q = q.filter(Business.rep == rep)
     businesses = q.order_by(Business.owner_score.desc()).limit(10).all()
     return jsonify([b.to_dict() for b in businesses])
 
@@ -693,12 +691,19 @@ def import_greenville():
 
 @app.route('/api/businesses/bulk_delete', methods=['POST'])
 def bulk_delete_businesses():
-    ids = request.json.get('ids', [])
-    if ids:
-        Visit.query.filter(Visit.business_id.in_(ids)).delete(synchronize_session=False)
-        Business.query.filter(Business.id.in_(ids)).delete(synchronize_session=False)
+    ids  = request.json.get('ids', [])
+    rep  = request.json.get('rep', '')
+    if not ids:
+        return jsonify({'deleted': 0})
+    q = Business.query.filter(Business.id.in_(ids))
+    if rep and rep != 'mayday':
+        q = q.filter(Business.rep == rep)
+    safe_ids = [b.id for b in q.all()]
+    if safe_ids:
+        Visit.query.filter(Visit.business_id.in_(safe_ids)).delete(synchronize_session=False)
+        Business.query.filter(Business.id.in_(safe_ids)).delete(synchronize_session=False)
         db.session.commit()
-    return jsonify({'deleted': len(ids)})
+    return jsonify({'deleted': len(safe_ids)})
 
 
 with app.app_context():
