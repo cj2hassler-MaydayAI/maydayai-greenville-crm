@@ -589,7 +589,7 @@ async function deleteSelected() {
   }
 }
 
-function renderRouteResult(data, batchInfo = null) {
+async function renderRouteResult(data, batchInfo = null) {
   const ol = document.getElementById('routeList');
   const homeItem = `<li style="color:#14b8a6;list-style:none"><span class="route-num" style="background:#14b8a6">🏠</span><div><strong>Start: ${esc(homeBase.address || 'Home Base')}</strong></div></li>`;
   ol.innerHTML = homeItem + data.route.map((b, i) => {
@@ -616,10 +616,38 @@ function renderRouteResult(data, batchInfo = null) {
   if (routeLayer) map.removeLayer(routeLayer);
   const stops = data.route.filter(b => b.lat && b.lng).map(b => [b.lat, b.lng]);
   const latlngs = [[homeBase.lat, homeBase.lng], ...stops, [homeBase.lat, homeBase.lng]];
-  if (latlngs.length > 2) {
-    routeLayer = L.polyline(latlngs, { color: '#3b82f6', weight: 3, opacity: 0.85, dashArray: '6 4' }).addTo(map);
+  if (latlngs.length < 2) return;
+
+  // Draw straight lines immediately so the layout is visible right away
+  routeLayer = L.polyline(latlngs, { color: '#3b82f6', weight: 4, opacity: 0.8, dashArray: '8 5' }).addTo(map);
+
+  // On mobile the route panel covers the map — flip to map tab so the line is visible
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    mobileTab('map', document.getElementById('mnav-map'));
+    setTimeout(() => {
+      map && map.invalidateSize();
+      routeLayer && map.fitBounds(routeLayer.getBounds(), { padding: [60, 60] });
+    }, 150);
+  } else {
     map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
   }
+
+  // Silently upgrade to road-following geometry via OSRM (free, no key needed)
+  try {
+    const coordStr = latlngs.map(([lat, lng]) => `${lng},${lat}`).join(';');
+    const osrm = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+    const osrmData = await osrm.json();
+    if (osrmData.code === 'Ok' && osrmData.routes?.[0]?.geometry?.coordinates?.length) {
+      const roadCoords = osrmData.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+      if (routeLayer) map.removeLayer(routeLayer);
+      routeLayer = L.polyline(roadCoords, { color: '#3b82f6', weight: 4, opacity: 0.9 }).addTo(map);
+      if (!isMobile) map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
+    }
+  } catch (_) { /* keep straight lines if OSRM unavailable */ }
 }
 
 async function runRoute() {
@@ -637,7 +665,7 @@ async function runRoute() {
   });
   const data = await res.json();
   if (data.error) { toast(data.error, 'error'); return; }
-  renderRouteResult(data);
+  await renderRouteResult(data);
 }
 
 // ── GEOGRAPHIC CLUSTERING HELPERS ────────────────────────────────────────────
@@ -694,7 +722,7 @@ async function routeBatch() {
   });
   const data = await res.json();
   if (data.error) { toast(data.error, 'error'); return; }
-  renderRouteResult(data, batchInfo);
+  await renderRouteResult(data, batchInfo);
 }
 
 function centerOnHome() {
