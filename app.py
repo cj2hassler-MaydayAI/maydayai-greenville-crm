@@ -5,6 +5,7 @@ from datetime import datetime
 import os
 import requests
 import math
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -584,6 +585,111 @@ def suggestions():
         q = q.filter(or_(Business.rep == rep, Business.rep == None))
     businesses = q.order_by(Business.owner_score.desc()).limit(10).all()
     return jsonify([b.to_dict() for b in businesses])
+
+IMPORT_CHAIN_BLOCKLIST = {
+    'great clips', 'sport clips', 'supercuts', "fantastic sam's", 'cost cutters', 'master cuts',
+    'aspen dental', 'bright now', 'western dental', 'pacific dental', 'kool smiles', 'comfort dental',
+}
+
+@app.route('/api/admin/import_greenville', methods=['POST'])
+def import_greenville():
+    if not GOOGLE_API_KEY:
+        return jsonify({'error': 'No Google API key configured'}), 400
+
+    SEARCHES = [
+        # (place_type, keyword, category_label, profile_key)
+        ('',         'med spa',           'Medical Front Desk', 'spa'),
+        ('dentist',  '',                  'Medical Front Desk', 'dentist'),
+        ('',         'chiropractor',      'Medical Front Desk', 'doctor'),
+        ('',         'physical therapy',  'Medical Front Desk', 'doctor'),
+        ('lawyer',   '',                  'Law Firm',           'lawyer'),
+        ('hair_care','',                  'Luxury Hair Salon',  'hair_care'),
+    ]
+
+    NB_URL  = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+    DET_URL = 'https://maps.googleapis.com/maps/api/place/details/json'
+    CENTER_LAT, CENTER_LNG = 35.6127, -77.3664
+    THIRTY_MILES_M = 48280
+
+    total_added = total_skipped = 0
+    breakdown = []
+
+    for place_type, keyword, category_label, profile_key in SEARCHES:
+        base_params = {'location': f'{CENTER_LAT},{CENTER_LNG}', 'radius': THIRTY_MILES_M, 'key': GOOGLE_API_KEY}
+        if place_type:
+            base_params['type'] = place_type
+        if keyword:
+            base_params['keyword'] = keyword
+
+        # Paginate up to 3 pages (max 60 results per search)
+        places = []
+        page_params = base_params.copy()
+        for _ in range(3):
+            resp = requests.get(NB_URL, params=page_params, timeout=15)
+            rdata = resp.json()
+            places.extend(rdata.get('results', []))
+            next_token = rdata.get('next_page_token')
+            if not next_token:
+                break
+            time.sleep(2)
+            page_params = {'pagetoken': next_token, 'key': GOOGLE_API_KEY}
+
+        profile = owner_profile(profile_key)
+        added = skipped = 0
+
+        for place in places:
+            name = place.get('name', '')
+            if any(c in name.lower() for c in IMPORT_CHAIN_BLOCKLIST):
+                skipped += 1
+                continue
+
+            types = place.get('types', [])
+            if any(t in SKIP_TYPES for t in types):
+                skipped += 1
+                continue
+
+            place_id = place.get('place_id', '')
+            if Business.query.filter_by(google_place_id=place_id).first():
+                skipped += 1
+                continue
+
+            loc = place.get('geometry', {}).get('location', {})
+            plat, plng = loc.get('lat'), loc.get('lng')
+            if plat and plng and haversine(CENTER_LAT, CENTER_LNG, plat, plng) > 48.28:
+                skipped += 1
+                continue
+
+            # Fetch phone + website from Details API
+            phone = website = ''
+            try:
+                det = requests.get(DET_URL, params={
+                    'place_id': place_id, 'fields': 'formatted_phone_number,website', 'key': GOOGLE_API_KEY
+                }, timeout=10).json().get('result', {})
+                phone   = det.get('formatted_phone_number', '')
+                website = det.get('website', '')
+            except Exception:
+                pass
+
+            db.session.add(Business(
+                google_place_id=place_id,
+                name=name,
+                address=place.get('vicinity', ''),
+                lat=plat, lng=plng,
+                phone=phone, website=website,
+                category=category_label,
+                owner_score=profile['score'],
+                best_window=profile['window'],
+                visit_tip=profile['tip'],
+                rep=None,
+            ))
+            added += 1
+
+        db.session.commit()
+        breakdown.append({'search': keyword or place_type, 'category': category_label, 'added': added, 'skipped': skipped})
+        total_added += added
+        total_skipped += skipped
+
+    return jsonify({'total_added': total_added, 'total_skipped': total_skipped, 'breakdown': breakdown})
 
 @app.route('/api/businesses/bulk_delete', methods=['POST'])
 def bulk_delete_businesses():
