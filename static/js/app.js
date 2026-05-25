@@ -589,7 +589,7 @@ async function deleteSelected() {
   }
 }
 
-function renderRouteResult(data) {
+function renderRouteResult(data, batchInfo = null) {
   const ol = document.getElementById('routeList');
   const homeItem = `<li style="color:#14b8a6;list-style:none"><span class="route-num" style="background:#14b8a6">🏠</span><div><strong>Start: ${esc(homeBase.address || 'Home Base')}</strong></div></li>`;
   ol.innerHTML = homeItem + data.route.map((b, i) => {
@@ -605,9 +605,11 @@ function renderRouteResult(data) {
     </li>`;
   }).join('') + homeItem.replace('Start:', 'End:');
 
-  let summary = `${data.route.length} stops`;
-  if (data.distance_km) summary += ` · ${data.distance_km} km total`;
-  if (data.duration_min) summary += ` · ~${data.duration_min} min driving`;
+  let summary = batchInfo
+    ? `Batch ${batchInfo.num} of ${batchInfo.total} · ${data.route.length} stops (closest to home)`
+    : `${data.route.length} stops`;
+  if (data.distance_km) summary += ` · ${data.distance_km} km`;
+  if (data.duration_min) summary += ` · ~${data.duration_min} min`;
   document.getElementById('routeSummary').textContent = summary;
   document.getElementById('routeInstructions').style.display = 'none';
 
@@ -638,24 +640,61 @@ async function runRoute() {
   renderRouteResult(data);
 }
 
-async function routeUnvisited() {
+// ── GEOGRAPHIC CLUSTERING HELPERS ────────────────────────────────────────────
+
+function geoDistKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function centroid(businesses) {
+  return {
+    lat: businesses.reduce((s, b) => s + b.lat, 0) / businesses.length,
+    lng: businesses.reduce((s, b) => s + b.lng, 0) / businesses.length,
+  };
+}
+
+function clusterBusinesses(businesses, batchSize) {
+  const pool = [...businesses];
+  const clusters = [];
+  while (pool.length > 0) {
+    const seed = pool.shift();
+    pool.sort((a, b) => geoDistKm(seed.lat, seed.lng, a.lat, a.lng) - geoDistKm(seed.lat, seed.lng, b.lat, b.lng));
+    const batch = [seed, ...pool.splice(0, Math.min(batchSize - 1, pool.length))];
+    clusters.push(batch);
+  }
+  return clusters;
+}
+
+async function routeBatch() {
   if (!homeBase) { toast('Set your start location first', 'error'); openSetHome(); return; }
 
   const unvisited = allBusinesses.filter(b => b.status === 'unvisited' && b.lat && b.lng);
   if (unvisited.length < 2) { toast('Need at least 2 unvisited businesses on the map', 'error'); return; }
 
-  const honorTimes = document.getElementById('honorTimesToggle').checked;
-  document.getElementById('routeSummary').textContent = `Routing ${unvisited.length} unvisited stops...`;
+  const clusters  = clusterBusinesses(unvisited, 20);
+  const best      = clusters.reduce((a, b) => {
+    const ca = centroid(a), cb = centroid(b);
+    return geoDistKm(homeBase.lat, homeBase.lng, ca.lat, ca.lng) <=
+           geoDistKm(homeBase.lat, homeBase.lng, cb.lat, cb.lng) ? a : b;
+  });
+  const batchNum  = clusters.indexOf(best) + 1;
+  const batchInfo = { num: batchNum, total: clusters.length, size: best.length };
+
+  document.getElementById('routeSummary').textContent = `Finding best batch...`;
   document.getElementById('routeInstructions').style.display = 'none';
 
   const res = await fetch('/api/route', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ business_ids: unvisited.map(b => b.id), honor_times: honorTimes }),
+    body: JSON.stringify({ business_ids: best.map(b => b.id), honor_times: document.getElementById('honorTimesToggle').checked }),
   });
   const data = await res.json();
   if (data.error) { toast(data.error, 'error'); return; }
-  renderRouteResult(data);
+  renderRouteResult(data, batchInfo);
 }
 
 function centerOnHome() {
