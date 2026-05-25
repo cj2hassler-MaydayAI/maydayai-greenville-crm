@@ -190,9 +190,11 @@ function renderList(businesses) {
   const el = document.getElementById('businessList');
   if (!businesses.length) {
     el.innerHTML = '<div class="empty-state">No businesses found.<br>Use Discover or Add Manual to get started.</div>';
+    updateSelectionUI();
     return;
   }
   el.innerHTML = businesses.map(b => cardHTML(b)).join('');
+  updateSelectionUI();
 }
 
 function renderSuggestions(businesses) {
@@ -539,6 +541,52 @@ async function submitHome() {
 function toggleRouteSelect(id) {
   const card = document.getElementById(`card-${id}`);
   if (card) card.classList.toggle('selected');
+  updateSelectionUI();
+}
+
+function selectAll() {
+  document.querySelectorAll('.biz-check').forEach(cb => {
+    cb.checked = true;
+    const card = document.getElementById(`card-${cb.dataset.id}`);
+    if (card) card.classList.add('selected');
+  });
+  updateSelectionUI();
+}
+
+function clearSelection() {
+  document.querySelectorAll('.biz-check').forEach(cb => {
+    cb.checked = false;
+    const card = document.getElementById(`card-${cb.dataset.id}`);
+    if (card) card.classList.remove('selected');
+  });
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  const count = document.querySelectorAll('.biz-check:checked').length;
+  const btn = document.getElementById('deleteSelectedBtn');
+  if (!btn) return;
+  btn.textContent = count > 0 ? `Delete Selected (${count})` : 'Delete Selected';
+  btn.disabled = count === 0;
+}
+
+async function deleteSelected() {
+  const ids = [...document.querySelectorAll('.biz-check:checked')].map(c => parseInt(c.dataset.id));
+  if (!ids.length) { toast('No businesses selected', 'error'); return; }
+  if (!confirm(`Delete ${ids.length} business${ids.length > 1 ? 'es' : ''}? This cannot be undone.`)) return;
+
+  const res = await fetch('/api/businesses/bulk_delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  const data = await res.json();
+  if (data.deleted !== undefined) {
+    toast(`Deleted ${data.deleted} business${data.deleted !== 1 ? 'es' : ''}`, 'success');
+    loadAll();
+  } else {
+    toast('Error deleting businesses', 'error');
+  }
 }
 
 function renderRouteResult(data) {

@@ -585,12 +585,14 @@ def suggestions():
     businesses = q.order_by(Business.owner_score.desc()).limit(10).all()
     return jsonify([b.to_dict() for b in businesses])
 
-@app.route('/api/admin/delete_all_businesses', methods=['POST'])
-def delete_all_businesses():
-    Visit.query.delete()
-    Business.query.delete()
-    db.session.commit()
-    return jsonify({'deleted': True})
+@app.route('/api/businesses/bulk_delete', methods=['POST'])
+def bulk_delete_businesses():
+    ids = request.json.get('ids', [])
+    if ids:
+        Visit.query.filter(Visit.business_id.in_(ids)).delete(synchronize_session=False)
+        Business.query.filter(Business.id.in_(ids)).delete(synchronize_session=False)
+        db.session.commit()
+    return jsonify({'deleted': len(ids)})
 
 
 with app.app_context():

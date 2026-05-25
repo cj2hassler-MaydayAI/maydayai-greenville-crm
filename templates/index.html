@@ -100,6 +100,11 @@
         </select>
       </div>
     </div>
+    <div class="selection-bar">
+      <button class="btn btn-sm btn-outline" onclick="selectAll()">Select All</button>
+      <button class="btn btn-sm btn-outline" onclick="clearSelection()">Clear</button>
+      <button class="btn btn-sm btn-danger" id="deleteSelectedBtn" onclick="deleteSelected()" disabled>Delete Selected</button>
+    </div>
     <div class="tab-row">
       <button class="tab-btn active" onclick="setTab('list', this)">List</button>
       <button class="tab-btn" onclick="setTab('suggestions', this)">Today's Picks</button>
