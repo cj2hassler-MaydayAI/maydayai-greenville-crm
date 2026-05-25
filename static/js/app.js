@@ -298,9 +298,25 @@ async function openDetail(id) {
   document.getElementById('detailName').textContent = b.name;
   document.getElementById('detailCategory').textContent = b.category || 'Business';
   setStatusBadge('detailStatus', b.status);
-  document.getElementById('detailAddress').textContent = b.address || '—';
-  document.getElementById('detailPhone').textContent = b.phone || '—';
-  document.getElementById('detailWebsite').textContent = b.website || '—';
+  const addrEl = document.getElementById('detailAddress');
+  if (b.address) {
+    const mapsUrl = b.lat && b.lng
+      ? `https://maps.apple.com/?ll=${b.lat},${b.lng}&q=${encodeURIComponent(b.name)}`
+      : `https://maps.apple.com/?q=${encodeURIComponent(b.address)}`;
+    addrEl.innerHTML = `<a href="${mapsUrl}" target="_blank" class="detail-link">${esc(b.address)}</a>`;
+  } else { addrEl.textContent = '—'; }
+
+  const phoneEl = document.getElementById('detailPhone');
+  if (b.phone) {
+    const tel = b.phone.replace(/\D/g, '');
+    phoneEl.innerHTML = `<a href="tel:${tel}" class="detail-link">${esc(b.phone)}</a>`;
+  } else { phoneEl.textContent = '—'; }
+
+  const webEl = document.getElementById('detailWebsite');
+  if (b.website) {
+    const url = b.website.startsWith('http') ? b.website : `https://${b.website}`;
+    webEl.innerHTML = `<a href="${esc(url)}" target="_blank" class="detail-link">${esc(b.website)}</a>`;
+  } else { webEl.textContent = '—'; }
   document.getElementById('detailOwner').textContent = b.owner_name ? `Owner: ${b.owner_name}` : 'Owner unknown';
   document.getElementById('detailWindow').textContent = b.best_window || '';
   document.getElementById('detailTip').textContent = b.visit_tip || '';
@@ -525,24 +541,7 @@ function toggleRouteSelect(id) {
   if (card) card.classList.toggle('selected');
 }
 
-async function runRoute() {
-  if (!homeBase) { toast('Set your start location first', 'error'); openSetHome(); return; }
-
-  const checked = [...document.querySelectorAll('.biz-check:checked')].map(c => parseInt(c.dataset.id));
-  if (checked.length < 2) { toast('Check at least 2 businesses', 'error'); return; }
-
-  const honorTimes = document.getElementById('honorTimesToggle').checked;
-  document.getElementById('routeSummary').textContent = 'Calculating...';
-  const res = await fetch('/api/route', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ business_ids: checked, honor_times: honorTimes }),
-  });
-  const data = await res.json();
-
-  if (data.error) { toast(data.error, 'error'); return; }
-
-  // Render route list — home base bookends the list
+function renderRouteResult(data) {
   const ol = document.getElementById('routeList');
   const homeItem = `<li style="color:#14b8a6;list-style:none"><span class="route-num" style="background:#14b8a6">🏠</span><div><strong>Start: ${esc(homeBase.address || 'Home Base')}</strong></div></li>`;
   ol.innerHTML = homeItem + data.route.map((b, i) => {
@@ -564,7 +563,6 @@ async function runRoute() {
   document.getElementById('routeSummary').textContent = summary;
   document.getElementById('routeInstructions').style.display = 'none';
 
-  // Draw route: home → stops → home
   if (routeLayer) map.removeLayer(routeLayer);
   const stops = data.route.filter(b => b.lat && b.lng).map(b => [b.lat, b.lng]);
   const latlngs = [[homeBase.lat, homeBase.lng], ...stops, [homeBase.lat, homeBase.lng]];
@@ -572,6 +570,49 @@ async function runRoute() {
     routeLayer = L.polyline(latlngs, { color: '#3b82f6', weight: 3, opacity: 0.85, dashArray: '6 4' }).addTo(map);
     map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
   }
+}
+
+async function runRoute() {
+  if (!homeBase) { toast('Set your start location first', 'error'); openSetHome(); return; }
+
+  const checked = [...document.querySelectorAll('.biz-check:checked')].map(c => parseInt(c.dataset.id));
+  if (checked.length < 2) { toast('Check at least 2 businesses', 'error'); return; }
+
+  const honorTimes = document.getElementById('honorTimesToggle').checked;
+  document.getElementById('routeSummary').textContent = 'Calculating...';
+  const res = await fetch('/api/route', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ business_ids: checked, honor_times: honorTimes }),
+  });
+  const data = await res.json();
+  if (data.error) { toast(data.error, 'error'); return; }
+  renderRouteResult(data);
+}
+
+async function routeUnvisited() {
+  if (!homeBase) { toast('Set your start location first', 'error'); openSetHome(); return; }
+
+  const unvisited = allBusinesses.filter(b => b.status === 'unvisited' && b.lat && b.lng);
+  if (unvisited.length < 2) { toast('Need at least 2 unvisited businesses on the map', 'error'); return; }
+
+  const honorTimes = document.getElementById('honorTimesToggle').checked;
+  document.getElementById('routeSummary').textContent = `Routing ${unvisited.length} unvisited stops...`;
+  document.getElementById('routeInstructions').style.display = 'none';
+
+  const res = await fetch('/api/route', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ business_ids: unvisited.map(b => b.id), honor_times: honorTimes }),
+  });
+  const data = await res.json();
+  if (data.error) { toast(data.error, 'error'); return; }
+  renderRouteResult(data);
+}
+
+function centerOnHome() {
+  if (!homeBase) { toast('No home base set', 'error'); return; }
+  map.setView([homeBase.lat, homeBase.lng], 15);
 }
 
 // ── DISCOVER ──────────────────────────────────────────────────────────────────

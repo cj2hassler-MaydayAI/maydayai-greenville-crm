@@ -111,6 +111,7 @@
   <!-- MAP -->
   <main class="map-container">
     <div id="map"></div>
+    <button class="map-center-btn" onclick="centerOnHome()" title="Center on home base">🏠</button>
     <div class="map-legend">
       <span class="legend-dot" style="background:#6b7280"></span>Unvisited
       <span class="legend-dot" style="background:#3b82f6"></span>Visited
@@ -135,12 +136,13 @@
       <button class="btn btn-sm btn-outline" onclick="openSetHome()">Type Address</button>
     </div>
     <div class="route-header-actions">
+      <button class="btn btn-sm btn-teal" onclick="routeUnvisited()">⚡ Route Unvisited</button>
       <button class="btn btn-sm btn-primary" onclick="runRoute()">Optimize Route</button>
       <button class="btn btn-sm btn-outline" onclick="closeRoute()">✕</button>
     </div>
   </div>
   <div class="route-instructions" id="routeInstructions">
-    Check businesses in the list, then click Optimize. Route starts and ends at your home base.
+    Tap <strong>Route Unvisited</strong> to auto-route all unvisited businesses. Or check specific businesses and tap <strong>Optimize Route</strong>.
     <label class="toggle-label">
       <span>Honor return times</span>
       <div class="toggle-wrap">
