@@ -868,6 +868,9 @@ async function pushToRetell() {
   const prompt = document.getElementById('voicePromptText').value.trim();
   if (!prompt) { toast('No prompt to push', 'error'); return; }
 
+  // Open blank tab immediately — mobile browsers block window.open after an await
+  const tab = window.open('', '_blank');
+
   btn.disabled = true;
   btn.textContent = 'Pushing...';
   try {
@@ -877,9 +880,12 @@ async function pushToRetell() {
       body: JSON.stringify({ prompt }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Push failed');
+    if (!res.ok) {
+      if (tab) tab.close();
+      throw new Error(data.error || 'Push failed');
+    }
     toast('Pushed to Retell!', 'success');
-    if (data.demo_url) window.open(data.demo_url, '_blank');
+    if (data.demo_url && tab) tab.location.href = data.demo_url;
   } catch (e) {
     toast(e.message, 'error');
   } finally {
