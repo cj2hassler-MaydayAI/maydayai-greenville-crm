@@ -192,6 +192,7 @@ class Business(db.Model):
     return_at = db.Column(db.String(10))   # HH:MM 24h, e.g. "14:00"
     return_note = db.Column(db.String(255)) # e.g. "ask for Mike"
     rep = db.Column(db.String(20))          # 'cj', 'mason', or null (shared/legacy)
+    hours = db.Column(db.Text)
     voice_prompt = db.Column(db.Text)
     last_visited = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -217,6 +218,7 @@ class Business(db.Model):
             'return_at': self.return_at,
             'return_note': self.return_note,
             'rep': self.rep,
+            'hours': self.hours,
             'voice_prompt': self.voice_prompt,
             'last_visited': self.last_visited.isoformat() if self.last_visited else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -304,6 +306,27 @@ def delete_business(bid):
     db.session.delete(b)
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/api/businesses/<int:bid>/fetch_hours', methods=['POST'])
+def fetch_hours(bid):
+    b = Business.query.get_or_404(bid)
+    if not b.google_place_id or not GOOGLE_API_KEY:
+        return jsonify({'hours': None})
+    try:
+        resp = requests.get('https://maps.googleapis.com/maps/api/place/details/json', params={
+            'place_id': b.google_place_id,
+            'fields': 'opening_hours',
+            'key': GOOGLE_API_KEY,
+        }, timeout=10)
+        weekday_text = resp.json().get('result', {}).get('opening_hours', {}).get('weekday_text', [])
+        if weekday_text:
+            b.hours = '\n'.join(weekday_text)
+            b.updated_at = datetime.utcnow()
+            db.session.commit()
+            return jsonify({'hours': b.hours})
+    except Exception:
+        pass
+    return jsonify({'hours': None})
 
 @app.route('/api/visits', methods=['POST'])
 def add_visit():
@@ -713,6 +736,7 @@ with app.app_context():
     # Migration: add rep column to existing databases
     for col_sql in [
         'ALTER TABLE business ADD COLUMN rep VARCHAR(20)',
+        'ALTER TABLE business ADD COLUMN hours TEXT',
         'ALTER TABLE business ADD COLUMN voice_prompt TEXT',
     ]:
         try:

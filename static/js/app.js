@@ -349,6 +349,21 @@ async function openDetail(id) {
 
   document.getElementById('voicePromptText').value = b.voice_prompt || generatePrompt(b);
 
+  // If hours not cached yet and we have a Google place ID, fetch in background
+  if (!b.hours && b.google_place_id && !b.voice_prompt) {
+    fetch(`/api/businesses/${b.id}/fetch_hours`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.hours) {
+          b.hours = data.hours;
+          // Only update the textarea if user hasn't edited it yet
+          const ta = document.getElementById('voicePromptText');
+          if (ta && currentBusiness?.id === b.id) ta.value = generatePrompt(b);
+        }
+      })
+      .catch(() => {});
+  }
+
   show('detailModal');
   if (b.lat && b.lng) {
     document.querySelector('.left-panel').classList.remove('mobile-open');
@@ -803,11 +818,13 @@ Keep it short and warm:
 function generatePrompt(b) {
   const desc     = CATEGORY_DESCRIPTIONS[b.category] || (b.category ? `a ${b.category.toLowerCase()}` : 'a local business');
   const services = CATEGORY_SERVICES[b.category]     || '[LIST_SERVICES_HERE — to be completed with client]';
+  const hours    = b.hours || '[DAYS_AND_HOURS]';
   return VOICE_PROMPT_TEMPLATE
     .replace(/\[AGENT_NAME\]/g,                        'Mason')
     .replace(/\[BUSINESS_NAME\]/g,                     b.name    || '[BUSINESS_NAME]')
     .replace(/\[ONE_LINE_DESCRIPTION_OF_BUSINESS\]/g,  desc)
     .replace(/\[FULL_ADDRESS\]/g,                      b.address || '[FULL_ADDRESS]')
+    .replace(/\[DAYS_AND_HOURS\]/g,                    hours)
     .replace(/\[PHONE_NUMBER\]/g,                      b.phone   || '[PHONE_NUMBER]')
     .replace(/\[WEBSITE_URL\]/g,                       b.website || '[WEBSITE_URL]')
     .replace(/\[OWNER_NAME\]/g,                        b.owner_name || '[OWNER_NAME]')
