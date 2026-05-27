@@ -350,7 +350,7 @@ async function openDetail(id) {
   document.getElementById('voicePromptText').value = b.voice_prompt || generatePrompt(b);
 
   // If hours not cached yet and we have a Google place ID, fetch in background
-  if (!b.hours && b.google_place_id && !b.voice_prompt) {
+  if (!b.hours && b.google_place_id) {
     fetch(`/api/businesses/${b.id}/fetch_hours`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
