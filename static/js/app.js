@@ -862,6 +862,32 @@ async function savePromptFromDetail() {
   toast('Prompt saved!', 'success');
 }
 
+async function pushToRetell() {
+  if (!currentBusiness) return;
+  const btn = document.getElementById('retellPushBtn');
+  const prompt = document.getElementById('voicePromptText').value.trim();
+  if (!prompt) { toast('No prompt to push', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Pushing...';
+  try {
+    const res = await fetch(`/api/businesses/${currentBusiness.id}/push_to_retell`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Push failed');
+    toast('Pushed to Retell!', 'success');
+    if (data.demo_url) window.open(data.demo_url, '_blank');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Push & Demo';
+  }
+}
+
 // ── GEOGRAPHIC CLUSTERING HELPERS ────────────────────────────────────────────
 
 function geoDistKm(lat1, lng1, lat2, lng2) {

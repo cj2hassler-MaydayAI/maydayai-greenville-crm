@@ -20,8 +20,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-GOOGLE_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY', '')
-ORS_API_KEY = os.getenv('ORS_API_KEY', '')
+GOOGLE_API_KEY  = os.getenv('GOOGLE_PLACES_API_KEY', '')
+ORS_API_KEY     = os.getenv('ORS_API_KEY', '')
+RETELL_API_KEY  = os.getenv('RETELL_API_KEY', '')
+RETELL_LLM_ID   = os.getenv('RETELL_LLM_ID', '')
+RETELL_AGENT_ID = os.getenv('RETELL_AGENT_ID', '')
+RETELL_DEMO_URL = os.getenv('RETELL_DEMO_URL', '')
 
 CENTER = {'lat': 35.6127, 'lng': -77.3664}
 
@@ -327,6 +331,39 @@ def fetch_hours(bid):
     except Exception:
         pass
     return jsonify({'hours': None})
+
+@app.route('/api/businesses/<int:bid>/push_to_retell', methods=['POST'])
+def push_to_retell(bid):
+    b = Business.query.get_or_404(bid)
+    prompt = (request.json or {}).get('prompt', '').strip()
+    if not prompt:
+        return jsonify({'error': 'No prompt provided'}), 400
+    if not RETELL_API_KEY or not RETELL_LLM_ID:
+        return jsonify({'error': 'Retell not configured on server'}), 500
+
+    headers = {
+        'Authorization': f'Bearer {RETELL_API_KEY}',
+        'Content-Type': 'application/json',
+    }
+    begin_msg = f"Hey, thanks for calling {b.name} — this is Mason. How can I help you today?"
+
+    llm_resp = requests.patch(
+        f'https://api.retellai.com/update-retell-llm/{RETELL_LLM_ID}',
+        headers=headers,
+        json={'general_prompt': prompt, 'begin_message': begin_msg},
+        timeout=15,
+    )
+    if llm_resp.status_code not in (200, 201):
+        return jsonify({'error': f'Retell LLM update failed ({llm_resp.status_code})'}), 500
+
+    if RETELL_AGENT_ID:
+        requests.post(
+            f'https://api.retellai.com/publish-agent-version/{RETELL_AGENT_ID}',
+            headers=headers,
+            timeout=10,
+        )
+
+    return jsonify({'ok': True, 'demo_url': RETELL_DEMO_URL})
 
 @app.route('/api/visits', methods=['POST'])
 def add_visit():
