@@ -216,6 +216,17 @@
         <div id="detailNotes" class="notes-display"></div>
       </div>
       <div id="visitHistory" class="visit-history"></div>
+
+      <div class="voice-prompt-section">
+        <div class="voice-prompt-header">
+          <span class="notes-label" style="margin:0">AI Voice Prompt</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm btn-outline" onclick="copyPromptFromDetail()">📋 Copy</button>
+            <button class="btn btn-sm btn-primary" onclick="savePromptFromDetail()">Save</button>
+          </div>
+        </div>
+        <textarea id="voicePromptText" class="voice-prompt-textarea" spellcheck="false"></textarea>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-danger btn-sm" onclick="deleteCurrentBusiness()">Delete</button>

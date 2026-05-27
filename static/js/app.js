@@ -347,6 +347,8 @@ async function openDetail(id) {
     vh.innerHTML = '';
   }
 
+  document.getElementById('voicePromptText').value = b.voice_prompt || generatePrompt(b);
+
   show('detailModal');
   if (b.lat && b.lng) {
     document.querySelector('.left-panel').classList.remove('mobile-open');
@@ -598,10 +600,11 @@ async function renderRouteResult(data, batchInfo = null) {
       : '';
     return `<li>
       <span class="route-num">${i + 1}</span>
-      <div>
+      <div style="flex:1">
         <strong>${esc(b.name)}</strong>${returnTag}
         <div style="font-size:11px;color:#94a3b8">${esc(b.address || '')}</div>
       </div>
+      <button class="route-prompt-btn" onclick="copyPromptById(${b.id})" title="Copy AI voice prompt">📋</button>
     </li>`;
   }).join('') + homeItem.replace('Start:', 'End:');
 
@@ -666,6 +669,183 @@ async function runRoute() {
   const data = await res.json();
   if (data.error) { toast(data.error, 'error'); return; }
   await renderRouteResult(data);
+}
+
+// ── AI VOICE PROMPT ───────────────────────────────────────────────────────────
+
+const CATEGORY_DESCRIPTIONS = {
+  'Luxury Hair Salon':  'a luxury hair salon offering premium cuts, color, and styling',
+  'Medical Front Desk': 'a healthcare and wellness practice',
+  'Law Firm':           'a law firm offering legal services to individuals and businesses',
+  'Law Office':         'a law office offering legal counsel and representation',
+  'Dental':             'a dental practice offering general and cosmetic dentistry',
+  'Spa':                'a spa and wellness center offering relaxation and beauty treatments',
+  'Hair Care':          'a hair salon offering cuts, color, and styling services',
+  'Beauty Salon':       'a full-service beauty salon',
+  'Medical':            'a medical practice',
+  'Physical Therapy':   'a physical therapy and rehabilitation clinic',
+  'Gym/Fitness':        'a fitness center and gym',
+  'Restaurant':         'a restaurant',
+  'Accounting':         'an accounting and financial services firm',
+  'Real Estate':        'a real estate agency',
+};
+
+const CATEGORY_SERVICES = {
+  'Luxury Hair Salon': `Haircut & style — 45–60 min — from $65
+Color & highlights — 90–150 min — from $85
+Blowout — 30–45 min — from $45
+Keratin treatment — 2–3 hrs — pricing on consultation`,
+  'Medical Front Desk': `New patient consultation — 30–60 min — pricing varies
+Follow-up appointment — 15–30 min — pricing varies
+Wellness & treatment session — 30–60 min — pricing varies`,
+  'Law Firm': `Initial consultation — 30–60 min — pricing varies
+Case review & legal strategy — varies — hourly rate applies
+Document drafting & review — varies — hourly rate applies
+Ongoing legal representation — varies — retainer-based`,
+  'Law Office': `Initial consultation — 30–60 min — pricing varies
+Case review & legal strategy — varies — hourly rate applies
+Document drafting & review — varies — hourly rate applies`,
+  'Dental': `Routine cleaning & exam — 45–60 min — pricing varies
+Fillings — 30–60 min — pricing varies
+Teeth whitening — 60–90 min — pricing varies
+Emergency dental visit — 30–60 min — pricing varies`,
+  'Spa': `Swedish massage — 60 min — from $75
+Deep tissue massage — 60 min — from $90
+Facial treatment — 60 min — from $80
+Body wrap — 75 min — from $95`,
+  'Hair Care': `Haircut — 30–45 min — from $35
+Color service — 60–120 min — from $60
+Blowout & style — 30–45 min — from $40`,
+  'Beauty Salon': `Haircut & style — 30–60 min — pricing varies
+Color service — 60–120 min — pricing varies
+Nail services — 30–60 min — pricing varies`,
+  'Medical': `New patient appointment — 30–60 min — pricing varies
+Follow-up visit — 15–30 min — pricing varies
+Consultation — 30 min — pricing varies`,
+  'Physical Therapy': `Initial evaluation — 60 min — pricing varies
+Physical therapy session — 45–60 min — pricing varies
+Sports rehabilitation — 45–60 min — pricing varies`,
+  'Gym/Fitness': `Monthly membership — unlimited access — pricing varies
+Personal training session — 60 min — pricing varies
+Group fitness class — 45–60 min — included with membership`,
+};
+
+const VOICE_PROMPT_TEMPLATE = `Role
+You are [AGENT_NAME], the receptionist at [BUSINESS_NAME]. You answer incoming phone calls, help people book appointments, and answer questions about the business.
+You are NOT an AI. You are NOT a bot. You are a real person doing a real job. Never say you are an AI, a virtual assistant, automated, or anything similar. If someone asks, you're just the receptionist.
+
+How you talk
+You sound like a normal human on the phone. That means:
+Keep replies SHORT. One or two sentences most of the time.
+Only ask ONE question at a time. Never stack multiple questions in one breath.
+Use casual, everyday words. "Yeah," "sure," "no worries," "got it," "one sec."
+Use small filler words sometimes: "um," "uh," "okay so," "alright." Don't overdo it. Sprinkle them in like a real person would.
+Contractions always. "I'll," "we're," "can't," "you're." Never "I will," "we are," "cannot."
+Do NOT sound like a corporate script. No "I would be more than happy to assist you today." Just "yeah, happy to help."
+Do NOT list things like a robot. If you have three options, say them naturally.
+Match the caller's energy. If they're chatty, be chatty. If they're in a rush, be quick.
+If a caller is upset, slow down, lower the energy, and just listen first before trying to fix anything.
+
+What you actually do
+Your job is three things:
+Book appointments
+Answer questions about the business
+Take a message if you can't help
+That's it. Stay in that lane.
+
+Business info
+Business name: [BUSINESS_NAME]
+What they do: [ONE_LINE_DESCRIPTION_OF_BUSINESS]
+Location / address: [FULL_ADDRESS]
+Opening hours: [DAYS_AND_HOURS]
+Phone: [PHONE_NUMBER]
+Website: [WEBSITE_URL]
+Parking / how to find us: [PARKING_INFO_OR_DIRECTIONS]
+
+Services and prices
+[LIST_SERVICES_HERE]
+
+Booking flow
+When someone wants to book, walk them through it naturally — ONE question at a time:
+What service they want
+What day/time works for them
+Their full name
+Their phone number (repeat it back to confirm)
+Then confirm: "Cool, so that's a [service] on [day] at [time] — I've got you down, [name]."
+Important for demo: you don't actually have a real calendar, so just act like the time they want is available (unless it's clearly outside opening hours). If they ask "did that actually book?" or "is this real?", tell them it's a demo so nothing's really on the books, but the full version connects to the actual calendar.
+
+FAQ — common questions callers ask
+[ADD_FAQS_HERE]
+
+Q: Where are you located? A: We're at [FULL_ADDRESS].
+Q: What are your hours? A: We're open [DAYS_AND_HOURS].
+Q: Do you have parking? A: [PARKING_INFO_OR_DIRECTIONS]
+Q: Do you take walk-ins? A: [Answer depends on business — add when working with client.]
+
+IMPORTANT — you are a demo version
+This version of you is a demo. You only know what's written in this prompt. You do NOT have access to a real calendar, real customer records, real payment systems, or anything outside what's on this page.
+If someone asks something not covered here, say in your own casual words:
+"Ah, so just a heads up — this is a demo version, so I can't answer that one. The full version we set up for businesses can handle stuff like that no problem, but this one's a bit more limited."
+
+What NOT to do
+Don't give medical, legal, or financial advice.
+Don't make promises about results or outcomes.
+Don't negotiate on price. If they push, say "that's just our standard pricing, but [OWNER_NAME] can chat with you about it if you want."
+Don't argue with anyone. If they're being rude, stay calm and polite.
+Don't keep them on the line longer than you need to.
+
+Ending the call
+Keep it short and warm:
+"Alright, you're all set — see you [day]."
+"No worries, have a good one."
+"Cool, speak soon."`;
+
+function generatePrompt(b) {
+  const desc     = CATEGORY_DESCRIPTIONS[b.category] || (b.category ? `a ${b.category.toLowerCase()}` : 'a local business');
+  const services = CATEGORY_SERVICES[b.category]     || '[LIST_SERVICES_HERE — to be completed with client]';
+  return VOICE_PROMPT_TEMPLATE
+    .replace(/\[AGENT_NAME\]/g,                        'Mason')
+    .replace(/\[BUSINESS_NAME\]/g,                     b.name    || '[BUSINESS_NAME]')
+    .replace(/\[ONE_LINE_DESCRIPTION_OF_BUSINESS\]/g,  desc)
+    .replace(/\[FULL_ADDRESS\]/g,                      b.address || '[FULL_ADDRESS]')
+    .replace(/\[PHONE_NUMBER\]/g,                      b.phone   || '[PHONE_NUMBER]')
+    .replace(/\[WEBSITE_URL\]/g,                       b.website || '[WEBSITE_URL]')
+    .replace(/\[OWNER_NAME\]/g,                        b.owner_name || '[OWNER_NAME]')
+    .replace(/\[LIST_SERVICES_HERE\]/g,                services);
+}
+
+function copyPromptById(id) {
+  const b = allBusinesses.find(biz => biz.id === id);
+  if (!b) return;
+  const text = b.voice_prompt || generatePrompt(b);
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Prompt copied!', 'success'))
+    .catch(() => { toast('Copy failed — open business to copy', 'error'); });
+}
+
+function copyPromptFromDetail() {
+  const text = document.getElementById('voicePromptText').value;
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Prompt copied!', 'success'))
+    .catch(() => {
+      const ta = document.getElementById('voicePromptText');
+      ta.select(); document.execCommand('copy');
+      toast('Prompt copied!', 'success');
+    });
+}
+
+async function savePromptFromDetail() {
+  if (!currentBusiness) return;
+  const text = document.getElementById('voicePromptText').value;
+  await fetch(`/api/businesses/${currentBusiness.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ voice_prompt: text }),
+  });
+  const b = allBusinesses.find(b => b.id === currentBusiness.id);
+  if (b) b.voice_prompt = text;
+  currentBusiness.voice_prompt = text;
+  toast('Prompt saved!', 'success');
 }
 
 // ── GEOGRAPHIC CLUSTERING HELPERS ────────────────────────────────────────────

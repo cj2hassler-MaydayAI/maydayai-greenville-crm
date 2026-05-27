@@ -192,6 +192,7 @@ class Business(db.Model):
     return_at = db.Column(db.String(10))   # HH:MM 24h, e.g. "14:00"
     return_note = db.Column(db.String(255)) # e.g. "ask for Mike"
     rep = db.Column(db.String(20))          # 'cj', 'mason', or null (shared/legacy)
+    voice_prompt = db.Column(db.Text)
     last_visited = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -216,6 +217,7 @@ class Business(db.Model):
             'return_at': self.return_at,
             'return_note': self.return_note,
             'rep': self.rep,
+            'voice_prompt': self.voice_prompt,
             'last_visited': self.last_visited.isoformat() if self.last_visited else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
@@ -709,11 +711,15 @@ def bulk_delete_businesses():
 with app.app_context():
     db.create_all()
     # Migration: add rep column to existing databases
-    try:
-        db.session.execute(db.text('ALTER TABLE business ADD COLUMN rep VARCHAR(20)'))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()  # Column already exists — that's fine
+    for col_sql in [
+        'ALTER TABLE business ADD COLUMN rep VARCHAR(20)',
+        'ALTER TABLE business ADD COLUMN voice_prompt TEXT',
+    ]:
+        try:
+            db.session.execute(db.text(col_sql))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5001))
