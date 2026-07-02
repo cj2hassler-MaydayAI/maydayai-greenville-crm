@@ -259,6 +259,11 @@ class Visit(db.Model):
 def index():
     return render_template('index.html')
 
+@app.route('/health')
+def health():
+    # Lightweight target for UptimeRobot — no DB query, no template render
+    return jsonify({'ok': True})
+
 @app.route('/api/businesses', methods=['GET'])
 def get_businesses():
     rep = request.args.get('rep', '')
@@ -271,6 +276,14 @@ def get_businesses():
 @app.route('/api/businesses', methods=['POST'])
 def add_business():
     data = request.json
+    # google_place_id is UNIQUE — adding a business that Discover already
+    # pulled in used to crash with an IntegrityError (500). Return the
+    # existing record's name so the rep knows it's already in the system.
+    if data.get('google_place_id'):
+        existing = Business.query.filter_by(google_place_id=data['google_place_id']).first()
+        if existing:
+            whose = {'cj': "CJ's list", 'mason': "Mason's list"}.get(existing.rep, 'the shared MaydayAI list')
+            return jsonify({'error': f'"{existing.name}" is already in {whose}'}), 409
     profile = owner_profile(data.get('category', ''))
     b = Business(
         name=data['name'],

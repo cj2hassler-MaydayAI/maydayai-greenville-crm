@@ -989,12 +989,20 @@ async function runDiscover(type, keyword) {
   const body = { type, keyword };
   if (lat !== null) { body.lat = lat; body.lng = lng; }
 
-  const res = await fetch('/api/discover', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
+  let data;
+  try {
+    const res = await fetch('/api/discover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    data = await res.json();
+  } catch (e) {
+    // Spotty cell signal in the field — don't leave the buttons dead
+    btns.forEach(b => b.disabled = false);
+    resultEl.textContent = '⚠ Network error — check your signal and try again.';
+    return;
+  }
 
   btns.forEach(b => b.disabled = false);
 
@@ -1124,7 +1132,8 @@ async function confirmAdd() {
     toast(`"${pendingAddData.name}" added!`, 'success');
     loadAll();
   } else {
-    toast('Error adding business', 'error');
+    const err = await res.json().catch(() => ({}));
+    toast(err.error || 'Error adding business', 'error');
   }
 }
 
