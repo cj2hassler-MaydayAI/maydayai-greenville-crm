@@ -64,6 +64,8 @@ function applyRep(rep) {
   const badge = document.getElementById('repBadge');
   if (badgeText) badgeText.textContent = labels[rep] || rep;
   if (badge) badge.style.borderColor = colors[rep] || '';
+  // MaydayAI is a read-only mirror of CJ + Mason — hide every write action
+  document.body.classList.toggle('mayday-view', rep === 'mayday');
 }
 
 function initMap() {
@@ -229,11 +231,16 @@ function cardHTML(b) {
   const returnBadge = b.return_at
     ? `<span class="return-badge">⏰ Back at ${fmt12(b.return_at)}${b.return_note ? ' · ' + esc(b.return_note) : ''}</span>`
     : '';
+  // In the MaydayAI mirror, show whose record this is
+  const repChip = currentRep === 'mayday' && b.rep
+    ? `<span class="rep-chip rep-${b.rep}">${b.rep === 'cj' ? 'CJ' : 'Mason'}</span>`
+    : '';
   return `
     <div class="biz-card" id="card-${b.id}" onclick="openDetail(${b.id})">
       <div class="biz-card-top">
         <input type="checkbox" class="biz-check" data-id="${b.id}" onclick="event.stopPropagation(); toggleRouteSelect(${b.id})" />
         <span class="biz-name">${esc(b.name)}</span>
+        ${repChip}
         <span class="status-badge s-${b.status}">${STATUS_LABELS[b.status] || b.status}</span>
       </div>
       <div class="biz-meta">
@@ -958,7 +965,10 @@ function centerOnHome() {
 
 // ── DISCOVER ──────────────────────────────────────────────────────────────────
 
-function openDiscover() { show('discoverModal'); document.getElementById('discoverResult').textContent = ''; }
+function openDiscover() {
+  if (currentRep === 'mayday') { toast('Switch to your CJ or Mason tab to discover — MaydayAI is view-only', 'error'); return; }
+  show('discoverModal'); document.getElementById('discoverResult').textContent = '';
+}
 function closeDiscover(e) { if (e.target.id === 'discoverModal') closeDiscoverModal(); }
 function closeDiscoverModal() { hide('discoverModal'); }
 
@@ -986,7 +996,7 @@ async function runDiscover(type, keyword) {
   }
 
   resultEl.textContent = 'Searching...';
-  const body = { type, keyword };
+  const body = { type, keyword, rep: currentRep };
   if (lat !== null) { body.lat = lat; body.lng = lng; }
 
   let data;
@@ -1022,6 +1032,7 @@ async function runDiscover(type, keyword) {
 let pendingAddData = null;
 
 function openAddModal() {
+  if (currentRep === 'mayday') { toast('Switch to your CJ or Mason tab to add businesses — MaydayAI is view-only', 'error'); return; }
   resetAddModal();
   show('addModal');
   setTimeout(() => document.getElementById('addName').focus(), 50);
@@ -1121,7 +1132,7 @@ async function confirmAdd() {
   if (nameEl) pendingAddData.name = nameEl.value.trim();
   if (!pendingAddData.name) { toast('Business name is required', 'error'); return; }
 
-  const payload = { ...pendingAddData, rep: currentRep !== 'mayday' ? currentRep : null };
+  const payload = { ...pendingAddData, rep: currentRep };
   const res = await fetch('/api/businesses', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

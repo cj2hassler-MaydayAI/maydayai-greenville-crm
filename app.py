@@ -178,8 +178,11 @@ def time_aware_route(businesses, start):
 
 
 class Business(db.Model):
+    # Each rep owns their own copy of a business — CJ and Mason can both have
+    # "Spa X" with independent statuses. Uniqueness is per (place, rep).
+    __table_args__ = (db.UniqueConstraint('google_place_id', 'rep', name='uq_business_place_rep'),)
     id = db.Column(db.Integer, primary_key=True)
-    google_place_id = db.Column(db.String(255), unique=True, nullable=True)
+    google_place_id = db.Column(db.String(255), nullable=True)
     name = db.Column(db.String(255), nullable=False)
     address = db.Column(db.String(500))
     lat = db.Column(db.Float)
@@ -276,14 +279,14 @@ def get_businesses():
 @app.route('/api/businesses', methods=['POST'])
 def add_business():
     data = request.json
-    # google_place_id is UNIQUE — adding a business that Discover already
-    # pulled in used to crash with an IntegrityError (500). Return the
-    # existing record's name so the rep knows it's already in the system.
+    rep = (data.get('rep') or '').strip()
+    if rep not in ('cj', 'mason'):
+        return jsonify({'error': 'Switch to your CJ or Mason tab to add businesses — MaydayAI is a read-only overview'}), 400
+    # Duplicate check is per-rep: Mason having it doesn't block CJ from adding it
     if data.get('google_place_id'):
-        existing = Business.query.filter_by(google_place_id=data['google_place_id']).first()
+        existing = Business.query.filter_by(google_place_id=data['google_place_id'], rep=rep).first()
         if existing:
-            whose = {'cj': "CJ's list", 'mason': "Mason's list"}.get(existing.rep, 'the shared MaydayAI list')
-            return jsonify({'error': f'"{existing.name}" is already in {whose}'}), 409
+            return jsonify({'error': f'"{existing.name}" is already in your list'}), 409
     profile = owner_profile(data.get('category', ''))
     b = Business(
         name=data['name'],
@@ -297,7 +300,7 @@ def add_business():
         owner_score=profile['score'],
         best_window=profile['window'],
         visit_tip=profile['tip'],
-        rep=data.get('rep') or None,
+        rep=rep,
     )
     db.session.add(b)
     db.session.commit()
@@ -471,12 +474,15 @@ def discover():
         return jsonify({'error': 'Add your GOOGLE_PLACES_API_KEY to .env to use discovery'}), 400
 
     data = request.json
+    rep = (data.get('rep') or '').strip()
+    if rep not in ('cj', 'mason'):
+        return jsonify({'error': 'Switch to your CJ or Mason tab to discover — MaydayAI is a read-only overview'}), 400
     place_type = data.get('type', '')
     keyword = data.get('keyword', 'small business')
     lat = data.get('lat', CENTER['lat'])
     lng = data.get('lng', CENTER['lng'])
-    # Discovered businesses are always shared (rep=null) so both reps see them
-    # and discovering the same category twice never creates duplicates
+    # Discovered businesses go into the CURRENT rep's list. The dedup below is
+    # per-rep, so Mason having a business never blocks CJ from discovering it.
 
     THIRTY_MILES_M = 48280
 
@@ -500,7 +506,7 @@ def discover():
         if any(t in SKIP_TYPES for t in types):
             skipped.append(place['name'])
             continue
-        if Business.query.filter_by(google_place_id=place['place_id']).first():
+        if Business.query.filter_by(google_place_id=place['place_id'], rep=rep).first():
             skipped.append(place['name'])
             continue
 
@@ -519,7 +525,7 @@ def discover():
             owner_score=profile['score'],
             best_window=profile['window'],
             visit_tip=profile['tip'],
-            rep=None,
+            rep=rep,
         )
         db.session.add(b)
         added.append(place['name'])
@@ -668,6 +674,9 @@ IMPORT_CHAIN_BLOCKLIST = {
 def import_greenville():
     if not GOOGLE_API_KEY:
         return jsonify({'error': 'No Google API key configured'}), 400
+    rep = ((request.json or {}).get('rep') or '').strip()
+    if rep not in ('cj', 'mason'):
+        return jsonify({'error': 'Pass rep: cj or mason — imports go into a specific rep\'s list'}), 400
 
     SEARCHES = [
         # (place_type, keyword, category_label, profile_key)
@@ -722,7 +731,7 @@ def import_greenville():
                 continue
 
             place_id = place.get('place_id', '')
-            if Business.query.filter_by(google_place_id=place_id).first():
+            if Business.query.filter_by(google_place_id=place_id, rep=rep).first():
                 skipped += 1
                 continue
 
@@ -753,7 +762,7 @@ def import_greenville():
                 owner_score=profile['score'],
                 best_window=profile['window'],
                 visit_tip=profile['tip'],
-                rep=None,
+                rep=rep,
             ))
             added += 1
 
@@ -768,11 +777,11 @@ def import_greenville():
 def bulk_delete_businesses():
     ids  = request.json.get('ids', [])
     rep  = request.json.get('rep', '')
+    if rep not in ('cj', 'mason'):
+        return jsonify({'error': 'MaydayAI is a read-only overview — switch to your own tab to delete'}), 403
     if not ids:
         return jsonify({'deleted': 0})
-    q = Business.query.filter(Business.id.in_(ids))
-    if rep and rep != 'mayday':
-        q = q.filter(Business.rep == rep)
+    q = Business.query.filter(Business.id.in_(ids), Business.rep == rep)
     safe_ids = [b.id for b in q.all()]
     if safe_ids:
         Visit.query.filter(Visit.business_id.in_(safe_ids)).delete(synchronize_session=False)
@@ -788,6 +797,9 @@ with app.app_context():
         'ALTER TABLE business ADD COLUMN rep VARCHAR(20)',
         'ALTER TABLE business ADD COLUMN hours TEXT',
         'ALTER TABLE business ADD COLUMN voice_prompt TEXT',
+        # Per-rep ownership: global unique on google_place_id → unique per (place, rep)
+        'ALTER TABLE business DROP CONSTRAINT business_google_place_id_key',
+        'ALTER TABLE business ADD CONSTRAINT uq_business_place_rep UNIQUE (google_place_id, rep)',
     ]:
         try:
             db.session.execute(db.text(col_sql))

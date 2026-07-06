@@ -62,8 +62,8 @@
     <div class="stat-pill teal" id="stat-rate"><span class="pill-num">—</span><span class="pill-label">Close Rate</span></div>
   </div>
   <div class="navbar-actions">
-    <button class="btn btn-outline" onclick="openDiscover()">+ Discover</button>
-    <button class="btn btn-outline" onclick="openAddModal()">+ Add Manual</button>
+    <button class="btn btn-outline write-action" onclick="openDiscover()">+ Discover</button>
+    <button class="btn btn-outline write-action" onclick="openAddModal()">+ Add Manual</button>
     <button class="btn btn-primary" onclick="openRoute()">Optimize Route</button>
   </div>
 </header>
@@ -103,7 +103,7 @@
     <div class="selection-bar">
       <button class="btn btn-sm btn-outline" onclick="selectAll()">Select All</button>
       <button class="btn btn-sm btn-outline" onclick="clearSelection()">Clear</button>
-      <button class="btn btn-sm btn-danger" id="deleteSelectedBtn" onclick="deleteSelected()" disabled>Delete Selected</button>
+      <button class="btn btn-sm btn-danger write-action" id="deleteSelectedBtn" onclick="deleteSelected()" disabled>Delete Selected</button>
     </div>
     <div class="tab-row">
       <button class="tab-btn active" onclick="setTab('list', this)">List</button>
@@ -222,7 +222,7 @@
           <span class="notes-label" style="margin:0">AI Voice Prompt</span>
           <div style="display:flex;gap:6px">
             <button class="btn btn-sm btn-outline" onclick="copyPromptFromDetail()">📋 Copy</button>
-            <button class="btn btn-sm btn-primary" onclick="savePromptFromDetail()">Save</button>
+            <button class="btn btn-sm btn-primary write-action" onclick="savePromptFromDetail()">Save</button>
             <button id="retellPushBtn" class="btn btn-sm btn-retell" onclick="pushToRetell()">Push &amp; Demo</button>
           </div>
         </div>
@@ -230,10 +230,10 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" onclick="deleteCurrentBusiness()">Delete</button>
+      <button class="btn btn-danger btn-sm write-action" onclick="deleteCurrentBusiness()">Delete</button>
       <div style="flex:1"></div>
       <button class="btn btn-outline btn-sm" onclick="closeDetailModal()">Close</button>
-      <button class="btn btn-primary" onclick="openLogVisit()">Log Visit</button>
+      <button class="btn btn-primary write-action" onclick="openLogVisit()">Log Visit</button>
     </div>
   </div>
 </div>
@@ -367,10 +367,10 @@
   <button class="mobile-nav-btn" id="mnav-list" onclick="mobileTab('list', this)">
     <span class="mnav-icon">📋</span><span class="mnav-label">Businesses</span>
   </button>
-  <button class="mobile-nav-btn mnav-add" onclick="openAddModal()">
+  <button class="mobile-nav-btn mnav-add write-action" onclick="openAddModal()">
     <span class="mnav-icon mnav-plus">+</span><span class="mnav-label">Add</span>
   </button>
-  <button class="mobile-nav-btn" onclick="openDiscover()">
+  <button class="mobile-nav-btn write-action" onclick="openDiscover()">
     <span class="mnav-icon">🔍</span><span class="mnav-label">Discover</span>
   </button>
   <button class="mobile-nav-btn" onclick="mobileTab('route', this)">

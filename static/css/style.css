@@ -476,3 +476,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .lookup-value.missing { color: var(--amber); border-color: rgba(245,158,11,0.3); font-style: italic; }
 .lookup-found-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--green); margin-bottom: 4px; }
 .lookup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── MaydayAI read-only mirror ─────────────────────────────────────────── */
+.mayday-view .write-action { display: none !important; }
+
+.rep-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+.rep-chip.rep-cj    { background: rgba(59,130,246,0.18);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.4); }
+.rep-chip.rep-mason { background: rgba(34,197,94,0.18);   color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
