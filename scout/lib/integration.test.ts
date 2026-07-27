@@ -10,7 +10,7 @@ import { createServer, type Server } from 'node:http';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const OFF_PRODUCT = {
   status: 1,
@@ -110,6 +110,15 @@ beforeAll(async () => {
       return void res.end(JSON.stringify({ address: { state: 'Florida' } }));
     }
     if (url.pathname === '/interpreter') return void res.end(JSON.stringify(OVERPASS_BODY));
+    // Stand-ins for a rate-limited / unreachable upstream.
+    if (url.pathname === '/dead-interpreter') {
+      res.statusCode = 429;
+      return void res.end('{}');
+    }
+    if (url.pathname === '/dead-search') {
+      res.statusCode = 504;
+      return void res.end('{}');
+    }
 
     res.statusCode = 404;
     res.end('{}');
@@ -212,6 +221,33 @@ describe('venue discovery path', () => {
     expect(venues[0].kind).toBe('fast_food');
     expect(venues[0].address).toBe('100 Main St, Greenville');
     expect(venues[0].distanceMeters).toBeLessThan(100);
+  });
+});
+
+describe('upstream failures are never reported as "nothing found"', () => {
+  it('nearbyVenues throws rather than returning an empty list', async () => {
+    process.env.SCOUT_OVERPASS_URL = `${baseUrl}/dead-interpreter`;
+    vi.resetModules();
+    const fresh = await import('./osm');
+    await expect(fresh.nearbyVenues(40.0, -75.0, 1600)).rejects.toThrow();
+    process.env.SCOUT_OVERPASS_URL = `${baseUrl}/interpreter`;
+  });
+
+  it('geocode throws on an unreachable service instead of reporting no such place', async () => {
+    process.env.SCOUT_NOMINATIM_BASE = `${baseUrl}/dead`;
+    vi.resetModules();
+    const fresh = await import('./osm');
+    await expect(fresh.geocode('Somewhere Real')).rejects.toThrow();
+    process.env.SCOUT_NOMINATIM_BASE = baseUrl;
+  });
+
+  it('reverse geocoding stays best-effort and degrades to null', async () => {
+    process.env.SCOUT_NOMINATIM_BASE = `${baseUrl}/dead`;
+    vi.resetModules();
+    const fresh = await import('./osm');
+    // Only drives the state-law banner, so it must not fail the whole lookup.
+    await expect(fresh.reverseGeocodeState(40.0, -75.0)).resolves.toBeNull();
+    process.env.SCOUT_NOMINATIM_BASE = baseUrl;
   });
 });
 

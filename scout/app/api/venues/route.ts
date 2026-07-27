@@ -36,7 +36,19 @@ export async function GET(request: NextRequest) {
   const query = params.get('q')?.trim();
 
   if (query) {
-    const place = await geocode(query);
+    let place;
+    try {
+      place = await geocode(query);
+    } catch {
+      return NextResponse.json(
+        {
+          error: 'upstream_unavailable',
+          message:
+            'Could not reach the OpenStreetMap search service. This is an outage on their side, not an answer about this place — try again shortly.',
+        },
+        { status: 503 },
+      );
+    }
     if (!place) {
       return NextResponse.json(
         { error: 'not_found', message: `No place found for "${query}".` },
@@ -58,7 +70,20 @@ export async function GET(request: NextRequest) {
   const radius = Number(params.get('radius')) || 1600;
   const state = await reverseGeocodeState(lat, lng);
 
-  const found = await nearbyVenues(lat, lng, radius);
+  let found;
+  try {
+    found = await nearbyVenues(lat, lng, radius);
+  } catch {
+    // Never render this as "nothing nearby" — we did not establish that.
+    return NextResponse.json(
+      {
+        error: 'upstream_unavailable',
+        message:
+          'Could not reach the OpenStreetMap venue service, so we do not know what is nearby. That is different from there being nothing here — try again shortly.',
+      },
+      { status: 503 },
+    );
+  }
   const venues: NearbyVenueDto[] = found.slice(0, 40).map((osm) => {
     const record = upsertVenue({
       osmId: osm.osmId,

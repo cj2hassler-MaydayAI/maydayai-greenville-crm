@@ -7,7 +7,7 @@
  * "© OpenStreetMap contributors".
  */
 
-import { cachedFetch, cachedFetchJson } from './http-cache';
+import { cachedFetch, cachedFetchJson, UpstreamError } from './http-cache';
 
 // Overridable: OSM asks heavy users to run their own Nominatim/Overpass rather
 // than lean on the public instances. Also lets tests point at a fixture server.
@@ -62,22 +62,24 @@ export async function geocode(query: string): Promise<GeocodeResult | null> {
     `${NOMINATIM}/search?q=${encodeURIComponent(trimmed)}` +
     `&format=json&limit=1&addressdetails=1&countrycodes=us`;
 
-  try {
-    const places = await cachedFetchJson<NominatimPlace[]>(url);
-    const place = places[0];
-    if (!place) return null;
-    return {
-      displayName: place.display_name,
-      lat: Number(place.lat),
-      lng: Number(place.lon),
-      state: place.address?.state ?? null,
-    };
-  } catch {
-    return null;
-  }
+  // A failed request propagates: "we could not reach Nominatim" and "that place
+  // does not exist" are different answers and must not collapse into one.
+  const places = await cachedFetchJson<NominatimPlace[]>(url);
+  const place = places[0];
+  if (!place) return null;
+  return {
+    displayName: place.display_name,
+    lat: Number(place.lat),
+    lng: Number(place.lon),
+    state: place.address?.state ?? null,
+  };
 }
 
-/** Reverse geocode, used to resolve which state a user's location falls in. */
+/**
+ * Reverse geocode, used to resolve which state a user's location falls in.
+ * Best-effort by design: this only drives the state-law banner, so a Nominatim
+ * hiccup degrades to "no banner" rather than failing the whole nearby lookup.
+ */
 export async function reverseGeocodeState(lat: number, lng: number): Promise<string | null> {
   const url =
     `${NOMINATIM}/reverse?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}` +
@@ -148,26 +150,24 @@ export async function nearbyVenues(
       node["shop"~"^(supermarket|convenience|greengrocer)$"](around:${around});
       way["shop"~"^(supermarket|convenience|greengrocer)$"](around:${around});
     );
-    out center tags 80;
+    out center 80;
   `.trim();
 
-  let body: string;
-  try {
-    body = await cachedFetch(OVERPASS, {
-      method: 'POST',
-      body: `data=${encodeURIComponent(query)}`,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      key: cacheKeyFor(lat, lng, radius),
-    });
-  } catch {
-    return [];
-  }
+  // Deliberately not caught: an unreachable or rate-limited Overpass is NOT the
+  // same as "no restaurants nearby". Swallowing it here would make the UI assert
+  // an absence we have not established. The caller distinguishes the two.
+  const body = await cachedFetch(OVERPASS, {
+    method: 'POST',
+    body: `data=${encodeURIComponent(query)}`,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    key: cacheKeyFor(lat, lng, radius),
+  });
 
   let payload: OverpassResponse;
   try {
     payload = JSON.parse(body) as OverpassResponse;
   } catch {
-    return [];
+    throw new UpstreamError('Overpass returned a response we could not parse', 502);
   }
 
   const venues: OsmVenue[] = [];
