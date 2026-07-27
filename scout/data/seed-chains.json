@@ -1,0 +1,494 @@
+{
+  "$comment": "Curated chain data. Read the honesty rules before adding entries: every item carries `source`, `verifiedAt`, and `confidence`. `confidence: \"low\"` means we have NOT verified this against a current published ingredient statement — most often it is the industry-default assumption that commercial fryers run a vegetable-oil blend. Low-confidence records can produce a `flagged` verdict but can never produce a `verified clean` one (see computeVerdict in lib/matcher.ts). Formulations change and vary by franchise; a chain with no items yields an honest \"no data\" verdict, which is the correct answer when we do not know.",
+  "sources": {
+    "published-allergen-guide": "Chain's own published allergen or ingredient statement.",
+    "published-statement": "Chain's own public statement or press release about a menu item or cooking oil.",
+    "industry-default": "UNVERIFIED assumption that commercial deep-frying uses a vegetable/seed oil blend. Always confidence: low.",
+    "menu-listing": "Item is listed on the chain's public menu; the named branded component is the flagged term."
+  },
+  "chains": [
+    {
+      "name": "McDonald's",
+      "aliases": ["McDonalds", "Mickey D's"],
+      "website": "https://www.mcdonalds.com",
+      "items": [
+        {
+          "name": "World Famous Fries",
+          "ingredientsText": "Potatoes, vegetable oil blend (canola oil, corn oil, soybean oil, hydrogenated soybean oil), natural beef flavor, dextrose, sodium acid pyrophosphate, salt.",
+          "source": "published-allergen-guide",
+          "confidence": "high",
+          "verifiedAt": "2026-07-27",
+          "note": "US formulation. Fries are cooked in the same oil as other fried items."
+        },
+        {
+          "name": "Chicken McNuggets",
+          "ingredientsText": "Chicken, water, vegetable oil (canola, corn, soybean), bleached wheat flour, modified food starch, salt.",
+          "source": "published-allergen-guide",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27"
+        }
+      ]
+    },
+    {
+      "name": "Chick-fil-A",
+      "aliases": ["Chick fil A", "Chickfila"],
+      "website": "https://www.chick-fil-a.com",
+      "items": [
+        {
+          "name": "Chick-fil-A Chicken Sandwich",
+          "ingredientsText": "Chicken breast, seasoning, milk, egg, flour, pressure-cooked in fully refined peanut oil.",
+          "source": "published-statement",
+          "confidence": "high",
+          "verifiedAt": "2026-07-27",
+          "note": "Chick-fil-A has long stated it fries in fully refined peanut oil. Peanut oil is not in the seed-oil taxonomy, so this is one of the few genuinely clean fried items — but sauces and dressings are separate and often are not."
+        },
+        {
+          "name": "Waffle Potato Fries",
+          "ingredientsText": "Potatoes, fully refined peanut oil, sea salt.",
+          "source": "published-statement",
+          "confidence": "high",
+          "verifiedAt": "2026-07-27"
+        }
+      ]
+    },
+    {
+      "name": "Five Guys",
+      "aliases": ["Five Guys Burgers and Fries"],
+      "website": "https://www.fiveguys.com",
+      "items": [
+        {
+          "name": "Five Guys Fries",
+          "ingredientsText": "Potatoes, peanut oil, salt.",
+          "source": "published-statement",
+          "confidence": "high",
+          "verifiedAt": "2026-07-27",
+          "note": "Five Guys states it cooks exclusively in peanut oil."
+        }
+      ]
+    },
+    {
+      "name": "In-N-Out Burger",
+      "aliases": ["In N Out", "InNOut"],
+      "website": "https://www.in-n-out.com",
+      "items": [
+        {
+          "name": "French Fries",
+          "ingredientsText": "Potatoes, sunflower oil.",
+          "source": "published-statement",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27",
+          "note": "In-N-Out has stated it fries in sunflower oil. Sunflower oil is in the seed-oil taxonomy."
+        }
+      ]
+    },
+    {
+      "name": "Burger King",
+      "aliases": ["BK"],
+      "website": "https://www.bk.com",
+      "items": [
+        {
+          "name": "Impossible Whopper",
+          "description": "Plant-based Whopper patty.",
+          "ingredientsText": "Impossible burger patty (water, soy protein concentrate, coconut oil, sunflower oil, natural flavors, soy leghemoglobin, methylcellulose), sesame seed bun, tomato, lettuce, mayonnaise, pickles, onion.",
+          "source": "menu-listing",
+          "confidence": "high",
+          "verifiedAt": "2026-07-27",
+          "note": "Cooked on the same broiler as beef unless a customer requests otherwise."
+        },
+        {
+          "name": "French Fries",
+          "ingredientsText": "Potatoes, vegetable oil blend, modified potato starch, rice flour, salt.",
+          "source": "industry-default",
+          "confidence": "low",
+          "verifiedAt": "2026-07-27",
+          "note": "UNVERIFIED. Assumed vegetable-oil blend, standard for commercial fryers. Confirm with the location."
+        }
+      ]
+    },
+    {
+      "name": "Wendy's",
+      "aliases": ["Wendys"],
+      "website": "https://www.wendys.com",
+      "items": [
+        {
+          "name": "Natural-Cut Fries",
+          "ingredientsText": "Potatoes, vegetable oil, salt.",
+          "source": "industry-default",
+          "confidence": "low",
+          "verifiedAt": "2026-07-27",
+          "note": "UNVERIFIED assumption of a vegetable-oil fryer blend."
+        }
+      ]
+    },
+    {
+      "name": "Taco Bell",
+      "aliases": [],
+      "website": "https://www.tacobell.com",
+      "items": [
+        {
+          "name": "Nacho Fries",
+          "ingredientsText": "Potatoes, vegetable oil, seasoning.",
+          "source": "industry-default",
+          "confidence": "low",
+          "verifiedAt": "2026-07-27",
+          "note": "UNVERIFIED assumption of a vegetable-oil fryer blend."
+        },
+        {
+          "name": "Refried Beans",
+          "ingredientsText": "Pinto beans, soybean oil, salt, spices.",
+          "source": "published-allergen-guide",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27"
+        }
+      ]
+    },
+    {
+      "name": "KFC",
+      "aliases": ["Kentucky Fried Chicken"],
+      "website": "https://www.kfc.com",
+      "items": [
+        {
+          "name": "Original Recipe Chicken",
+          "ingredientsText": "Chicken, wheat flour, salt, spices, monosodium glutamate, fried in vegetable oil.",
+          "source": "industry-default",
+          "confidence": "low",
+          "verifiedAt": "2026-07-27",
+          "note": "UNVERIFIED assumption of a vegetable-oil fryer blend."
+        }
+      ]
+    },
+    {
+      "name": "Popeyes",
+      "aliases": ["Popeyes Louisiana Kitchen"],
+      "website": "https://www.popeyes.com",
+      "items": []
+    },
+    {
+      "name": "Chipotle Mexican Grill",
+      "aliases": ["Chipotle"],
+      "website": "https://www.chipotle.com",
+      "items": [
+        {
+          "name": "Chips",
+          "ingredientsText": "Corn masa flour, water, rice bran oil, lime juice, salt.",
+          "source": "published-allergen-guide",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27",
+          "note": "Chipotle has published rice bran oil for chips and sunflower oil elsewhere. Both are in the seed-oil taxonomy."
+        },
+        {
+          "name": "Steak Bowl (no chips)",
+          "ingredientsText": "Steak (beef, salt, black pepper), cilantro-lime rice, black beans, fajita vegetables, tomato salsa. Cooked in rice bran oil.",
+          "source": "published-allergen-guide",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27"
+        }
+      ]
+    },
+    {
+      "name": "Subway",
+      "aliases": [],
+      "website": "https://www.subway.com",
+      "items": []
+    },
+    {
+      "name": "Starbucks",
+      "aliases": [],
+      "website": "https://www.starbucks.com",
+      "items": []
+    },
+    {
+      "name": "Dunkin'",
+      "aliases": ["Dunkin Donuts", "Dunkin"],
+      "website": "https://www.dunkindonuts.com",
+      "items": [
+        {
+          "name": "Glazed Donut",
+          "ingredientsText": "Enriched wheat flour, sugar, palm oil, soybean oil, water, yeast, salt.",
+          "source": "industry-default",
+          "confidence": "low",
+          "verifiedAt": "2026-07-27",
+          "note": "UNVERIFIED. Commercial donut frying shortening commonly contains soybean or palm oil."
+        }
+      ]
+    },
+    {
+      "name": "Shake Shack",
+      "aliases": ["Shakeshack"],
+      "website": "https://www.shakeshack.com",
+      "items": []
+    },
+    {
+      "name": "Sweetgreen",
+      "aliases": [],
+      "website": "https://www.sweetgreen.com",
+      "items": []
+    },
+    {
+      "name": "Panera Bread",
+      "aliases": ["Panera"],
+      "website": "https://www.panerabread.com",
+      "items": []
+    },
+    {
+      "name": "Panda Express",
+      "aliases": [],
+      "website": "https://www.pandaexpress.com",
+      "items": [
+        {
+          "name": "Orange Chicken",
+          "ingredientsText": "Chicken, wheat flour, cornstarch, soybean oil, sugar, vinegar, soy sauce, chili peppers.",
+          "source": "published-allergen-guide",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27"
+        }
+      ]
+    },
+    {
+      "name": "Chili's Grill & Bar",
+      "aliases": ["Chilis"],
+      "website": "https://www.chilis.com",
+      "items": []
+    },
+    {
+      "name": "Applebee's",
+      "aliases": ["Applebees"],
+      "website": "https://www.applebees.com",
+      "items": []
+    },
+    {
+      "name": "Olive Garden",
+      "aliases": [],
+      "website": "https://www.olivegarden.com",
+      "items": []
+    },
+    {
+      "name": "Texas Roadhouse",
+      "aliases": [],
+      "website": "https://www.texasroadhouse.com",
+      "items": []
+    },
+    {
+      "name": "Outback Steakhouse",
+      "aliases": ["Outback"],
+      "website": "https://www.outback.com",
+      "items": []
+    },
+    {
+      "name": "Cracker Barrel",
+      "aliases": [],
+      "website": "https://www.crackerbarrel.com",
+      "items": []
+    },
+    {
+      "name": "Denny's",
+      "aliases": ["Dennys"],
+      "website": "https://www.dennys.com",
+      "items": []
+    },
+    {
+      "name": "IHOP",
+      "aliases": ["International House of Pancakes"],
+      "website": "https://www.ihop.com",
+      "items": []
+    },
+    {
+      "name": "Waffle House",
+      "aliases": [],
+      "website": "https://www.wafflehouse.com",
+      "items": []
+    },
+    {
+      "name": "Domino's Pizza",
+      "aliases": ["Dominos"],
+      "website": "https://www.dominos.com",
+      "items": []
+    },
+    {
+      "name": "Pizza Hut",
+      "aliases": [],
+      "website": "https://www.pizzahut.com",
+      "items": []
+    },
+    {
+      "name": "Papa Johns",
+      "aliases": ["Papa John's"],
+      "website": "https://www.papajohns.com",
+      "items": []
+    },
+    {
+      "name": "Little Caesars",
+      "aliases": [],
+      "website": "https://www.littlecaesars.com",
+      "items": []
+    },
+    {
+      "name": "Arby's",
+      "aliases": ["Arbys"],
+      "website": "https://www.arbys.com",
+      "items": [
+        {
+          "name": "Curly Fries",
+          "ingredientsText": "Potatoes, vegetable oil, enriched wheat flour, seasoning.",
+          "source": "industry-default",
+          "confidence": "low",
+          "verifiedAt": "2026-07-27",
+          "note": "UNVERIFIED assumption of a vegetable-oil fryer blend."
+        }
+      ]
+    },
+    {
+      "name": "Sonic Drive-In",
+      "aliases": ["Sonic"],
+      "website": "https://www.sonicdrivein.com",
+      "items": []
+    },
+    {
+      "name": "Jack in the Box",
+      "aliases": [],
+      "website": "https://www.jackinthebox.com",
+      "items": []
+    },
+    {
+      "name": "Carl's Jr.",
+      "aliases": ["Carls Jr"],
+      "website": "https://www.carlsjr.com",
+      "items": [
+        {
+          "name": "Beyond Famous Star",
+          "ingredientsText": "Beyond Meat plant-based patty (water, pea protein isolate, canola oil, coconut oil, methylcellulose), bun, lettuce, tomato, onion, mayonnaise.",
+          "source": "menu-listing",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27"
+        }
+      ]
+    },
+    {
+      "name": "Hardee's",
+      "aliases": ["Hardees"],
+      "website": "https://www.hardees.com",
+      "items": []
+    },
+    {
+      "name": "Whataburger",
+      "aliases": [],
+      "website": "https://www.whataburger.com",
+      "items": []
+    },
+    {
+      "name": "Culver's",
+      "aliases": ["Culvers"],
+      "website": "https://www.culvers.com",
+      "items": []
+    },
+    {
+      "name": "Raising Cane's",
+      "aliases": ["Raising Canes", "Canes"],
+      "website": "https://www.raisingcanes.com",
+      "items": [
+        {
+          "name": "Chicken Fingers",
+          "ingredientsText": "Chicken tenderloin, wheat flour, seasoning, fried in canola oil.",
+          "source": "industry-default",
+          "confidence": "low",
+          "verifiedAt": "2026-07-27",
+          "note": "UNVERIFIED. Confirm the current fryer oil with the location."
+        }
+      ]
+    },
+    {
+      "name": "Zaxby's",
+      "aliases": ["Zaxbys"],
+      "website": "https://www.zaxbys.com",
+      "items": []
+    },
+    {
+      "name": "Bojangles",
+      "aliases": ["Bojangles'"],
+      "website": "https://www.bojangles.com",
+      "items": []
+    },
+    {
+      "name": "Wingstop",
+      "aliases": [],
+      "website": "https://www.wingstop.com",
+      "items": []
+    },
+    {
+      "name": "Jimmy John's",
+      "aliases": ["Jimmy Johns"],
+      "website": "https://www.jimmyjohns.com",
+      "items": []
+    },
+    {
+      "name": "Jersey Mike's Subs",
+      "aliases": ["Jersey Mikes"],
+      "website": "https://www.jerseymikes.com",
+      "items": []
+    },
+    {
+      "name": "Firehouse Subs",
+      "aliases": [],
+      "website": "https://www.firehousesubs.com",
+      "items": []
+    },
+    {
+      "name": "Qdoba Mexican Eats",
+      "aliases": ["Qdoba"],
+      "website": "https://www.qdoba.com",
+      "items": []
+    },
+    {
+      "name": "Del Taco",
+      "aliases": [],
+      "website": "https://www.deltaco.com",
+      "items": [
+        {
+          "name": "Beyond Taco",
+          "ingredientsText": "Beyond Meat plant-based crumbles (water, pea protein isolate, canola oil, coconut oil, methylcellulose), tortilla, lettuce, cheddar cheese, tomato.",
+          "source": "menu-listing",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27"
+        }
+      ]
+    },
+    {
+      "name": "White Castle",
+      "aliases": [],
+      "website": "https://www.whitecastle.com",
+      "items": [
+        {
+          "name": "Impossible Slider",
+          "ingredientsText": "Impossible burger patty (water, soy protein concentrate, coconut oil, sunflower oil, soy leghemoglobin, methylcellulose), bun, onion, pickle, cheese.",
+          "source": "menu-listing",
+          "confidence": "medium",
+          "verifiedAt": "2026-07-27"
+        }
+      ]
+    },
+    {
+      "name": "Dairy Queen",
+      "aliases": ["DQ"],
+      "website": "https://www.dairyqueen.com",
+      "items": []
+    },
+    {
+      "name": "Portillo's",
+      "aliases": ["Portillos"],
+      "website": "https://www.portillos.com",
+      "items": []
+    },
+    {
+      "name": "Steak 'n Shake",
+      "aliases": ["Steak n Shake"],
+      "website": "https://www.steaknshake.com",
+      "items": []
+    },
+    {
+      "name": "Moe's Southwest Grill",
+      "aliases": ["Moes"],
+      "website": "https://www.moes.com",
+      "items": []
+    }
+  ]
+}

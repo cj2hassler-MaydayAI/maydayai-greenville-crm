@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Field reference tool, not a wellness app. Closer to transit signage: read at a
+  glance, at arm's length, in bad light. The three signal colors are reserved for
+  verdicts and never used decoratively.
+*/
+
+:root {
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-bone text-slate-ink font-sans antialiased;
+    /* Keep content clear of the fixed bottom nav. */
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  }
+
+  /* Visible keyboard focus everywhere, no exceptions. */
+  :focus-visible {
+    outline: 3px solid #2b3440;
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: #2b3440;
+    color: #edeae3;
+  }
+}
+
+@layer components {
+  .rule {
+    @apply border-t-2 border-slate-ink;
+  }
+
+  .label-caps {
+    @apply font-display uppercase tracking-[0.14em] text-xs;
+  }
+
+  /* The signature element: a rubber-stamp verdict badge, slightly rotated. */
+  .stamp {
+    @apply font-display uppercase inline-flex flex-col items-center justify-center
+           border-[3px] px-3 py-1.5 leading-none tracking-[0.08em];
+    transform: rotate(-4deg);
+    border-radius: 3px;
+    /* Ink-bleed edge, so it reads as pressed onto the card rather than drawn. */
+    box-shadow: inset 0 0 0 1px currentColor;
+    opacity: 0.94;
+  }
+
+  .stamp-sm {
+    @apply text-sm px-2 py-1 border-2;
+    transform: rotate(-3deg);
+  }
+
+  .stamp-verified {
+    @apply text-verified border-verified;
+  }
+  .stamp-flagged {
+    @apply text-flagged border-flagged;
+  }
+  .stamp-unknown {
+    @apply text-unknown border-unknown;
+  }
+
+  /* Ingredient strings look like data, because that is what earns trust. */
+  .ingredients {
+    @apply font-mono text-[0.8125rem] leading-relaxed break-words;
+  }
+
+  .ingredient-hit {
+    @apply bg-flagged/15 text-flagged font-semibold rounded-[2px] px-[3px] py-[1px]
+           underline decoration-flagged decoration-2 underline-offset-2;
+  }
+
+  .card {
+    @apply bg-bone border-2 border-slate-ink;
+  }
+
+  .btn {
+    @apply font-display uppercase tracking-[0.1em] text-sm border-2 border-slate-ink
+           px-4 py-2.5 bg-bone transition-colors;
+  }
+  .btn:hover {
+    @apply bg-slate-ink text-bone;
+  }
+  .btn-primary {
+    @apply bg-slate-ink text-bone;
+  }
+  .btn-primary:hover {
+    @apply bg-bone text-slate-ink;
+  }
+  .btn:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+  .btn:disabled:hover {
+    @apply bg-bone text-slate-ink;
+  }
+
+  .field {
+    @apply w-full border-2 border-slate-ink bg-bone px-3 py-2.5 text-base
+           placeholder:text-slate-muted;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* A stamp that is not rotated is still a stamp; motion sensitivity does not
+     mean flatten everything, so the rotation stays — only motion is removed. */
+}
+
+/* Leaflet's own styles are loaded by the map component; these keep its chrome
+   inside our palette rather than its default blue-and-white. */
+.leaflet-container {
+  background: #dfdbd1;
+  font-family: inherit;
+}
+.leaflet-bar a {
+  color: #2b3440;
+}
